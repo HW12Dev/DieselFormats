@@ -254,8 +254,6 @@ namespace diesel {
 
             HeaderVectorType* header_vector = new HeaderVectorType();
 
-            /*if (bundle_type == "default")
-              __debugbreak();*/
 
             reader.SetPosition(header._data._data + 4);
 
@@ -269,7 +267,6 @@ namespace diesel {
             }
 
             reader.ReadType<uint32_t>(); // typeid
-
 
             ///
             /// RAID: World War II multiplies unk1_size by 2, then does a for loop reading that number of uint32t's, for some reason.
@@ -295,6 +292,12 @@ namespace diesel {
 
     Bundle::~Bundle() {
       for (auto header : this->_pdth_headers) {
+        delete header;
+      }
+      for (auto header : this->_raid_stream_init_headers) {
+        delete header;
+      }
+      for (auto header : this->_raid_stream_default_headers) {
         delete header;
       }
     }
