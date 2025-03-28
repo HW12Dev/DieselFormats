@@ -1,0 +1,8 @@
+.vs
+packages
+x64
+DieselVisualiser/x64
+DieselVisualiserVSIX/bin
+DieselVisualiserVSIX/obj
+
+DieselVisualiserVSIX_*.vsix

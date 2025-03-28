@@ -1,0 +1,165 @@
+#pragma once
+
+#include "fileio/reader.h"
+#include "diesel/modern/hash.h"
+#include "diesel/shared.h"
+
+#include <unordered_map>
+
+// dsl::Diesel::Diesel
+#define TYPE_ID_LIST \
+TYPE_ID_ENTRY(PersistentObject, 0x2EB43C77) \
+TYPE_ID_ENTRY(Object3D, 0xFFCD100) \
+TYPE_ID_ENTRY(LightSet, 0x33552583) \
+TYPE_ID_ENTRY(Model, 0x62212D88) \
+TYPE_ID_ENTRY(AuthorTag, 0x7623C465) \
+TYPE_ID_ENTRY(Geometry, 0x7AB072D3) \
+TYPE_ID_ENTRY(SimpleTexture, 0x72B4D37) \
+TYPE_ID_ENTRY(CubicTexture, 0x2C5D6201) \
+TYPE_ID_ENTRY(VolumetricTexture, 0x1D0B1808) \
+TYPE_ID_ENTRY(Material, 0x3C54609C) \
+TYPE_ID_ENTRY(MaterialGroup, 0x29276B1D) \
+TYPE_ID_ENTRY(NormalManagingGP, 0x2C1F096F) \
+TYPE_ID_ENTRY(TextureSpaceGP, 0x5ED2532F) \
+TYPE_ID_ENTRY(PassThroughGP, 0xE3A3B1CA) \
+TYPE_ID_ENTRY(SkinBones, 0x65CC1825) \
+TYPE_ID_ENTRY(Topology, 0x4C507A13) \
+TYPE_ID_ENTRY(TopologyIP, 0x3B634BD) \
+TYPE_ID_ENTRY(Camera, 0x46BF31A7) \
+TYPE_ID_ENTRY(Light, 0xFFA13B80) \
+\
+TYPE_ID_ENTRY(ConstFloatController, 0x2060697E) \
+TYPE_ID_ENTRY(StepFloatController, 0x6DA951B2) \
+TYPE_ID_ENTRY(LinearFloatController, 0x76BF5B66) \
+TYPE_ID_ENTRY(BezierFloatController, 0x29743550) \
+\
+TYPE_ID_ENTRY(ConstVector3Controller, 0x5B0168D0) \
+TYPE_ID_ENTRY(StepVector3Controller, 0x544E238F) \
+TYPE_ID_ENTRY(LinearVector3Controller, 0x26A5128C) \
+TYPE_ID_ENTRY(BezierVector3Controller, 0x28DB639A) \
+TYPE_ID_ENTRY(XYZVector3Controller, 0x33DA0FC4) \
+\
+TYPE_ID_ENTRY(ConstRotationController, 0x2E540F3C) \
+TYPE_ID_ENTRY(EulerRotationController, 0x33606E8) \
+TYPE_ID_ENTRY(QuatStepRotationController, 0x007FB371) \
+TYPE_ID_ENTRY(QuatLinearRotationController, 0x648A206C) \
+TYPE_ID_ENTRY(QuatBezRotationController, 0x197345A5) \
+TYPE_ID_ENTRY(LookAtRotationController, 0x22126DC0) \
+TYPE_ID_ENTRY(LookAtConstrRotationController, 0x679D695B) \
+\
+TYPE_ID_ENTRY(IKChainTarget, 0x3D756E0C) \
+TYPE_ID_ENTRY(IKChainRotationController, 0xF6C1EEF7) \
+\
+TYPE_ID_ENTRY(CompositeVector3Controller, 0xDD41D329) \
+TYPE_ID_ENTRY(CompositeRotationController, 0x95BB08F7) \
+\
+TYPE_ID_ENTRY(AnimationData, 0x5DC011B8) \
+TYPE_ID_ENTRY(Animatable, 0x74F7363F) \
+\
+TYPE_ID_ENTRY(KeyEvents, 0x186A8BBF)
+
+
+namespace diesel {
+  typedef uint32_t RefId;
+  typedef uint32_t TypeId;
+
+  namespace typeids {
+#define TYPE_ID_ENTRY(clazz, id) clazz = id,
+    enum TypeIds : TypeId {
+      TYPE_ID_LIST
+    };
+#undef TYPE_ID_ENTRY
+  }
+
+  class ReferenceMap;
+
+  namespace typeidclasses {
+
+#define TYPE_ID_AUTOFILL(typeName) virtual TypeId type_id() { return diesel::typeids::TypeIds::##typeName; }
+
+    class PersistentObject {
+    public:
+      PersistentObject();
+      virtual ~PersistentObject();
+    public:
+      virtual void load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version);
+      TYPE_ID_AUTOFILL(PersistentObject);
+
+    private:
+      diesel::modern::Idstring _name;
+#ifndef NDEBUG
+      std::string _name_str;
+#endif
+    };
+
+    class AuthorTag : public PersistentObject {
+    public:
+      virtual void load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) override;
+      TYPE_ID_AUTOFILL(AuthorTag);
+
+    private:
+      std::string _author_tag;
+      std::string _last_export_source;
+      uint32_t _version;
+    };
+
+    class Animatable : public PersistentObject {
+    public:
+      virtual void load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) override;
+      TYPE_ID_AUTOFILL(Animatable);
+
+    private:
+    };
+
+    class Object3D : public Animatable {
+    public:
+      virtual void load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) override;
+      TYPE_ID_AUTOFILL(Object3D);
+
+    private:
+      Object3D* _parent;
+      Matrix4 _local_tm;
+    };
+
+    class Model : public Object3D {
+    public:
+      virtual void load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) override;
+      TYPE_ID_AUTOFILL(Model);
+
+    private:
+    };
+
+    PersistentObject* ConstructPersistentObjectFromTypeId(TypeId typeId, diesel::EngineVersion version);
+  }
+#undef TYPE_ID_AUTOFILL
+
+  const char* TypeIdToStr(TypeId typeId);
+
+  class ReferenceMap {
+  public:
+    template<typename T>
+    void load_ref(RefId ref_id, T** ptr) {
+      referencesToFulfill.push_back({ ref_id, (typeidclasses::PersistentObject**)ptr });
+    }
+
+    void AddRef(RefId refId, typeidclasses::PersistentObject* obj);
+    typeidclasses::PersistentObject* GetObjectFromRefId(RefId refId);
+
+    void AssignAllReferences();
+
+  private:
+    std::unordered_map<RefId, typeidclasses::PersistentObject*> refidToObjMap;
+
+    std::vector<std::pair<RefId, typeidclasses::PersistentObject**>> referencesToFulfill;
+  };
+
+  class ObjectDatabase {
+  public:
+    ObjectDatabase(Reader& reader, diesel::EngineVersion version);
+    ~ObjectDatabase();
+
+
+  private:
+    std::vector<typeidclasses::PersistentObject*> _object_list;
+  };
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
+  <NativeComponent
+    ComponentId="{1B207119-B9DE-407C-B7FC-DD6854A0D752}"
+    ComponentLevel="9991500"
+    ModuleName="DieselVisualiser.dll">
+
+    <Class Name="CDieselIdstringVisualiserService" ClassId="{10ECA418-7003-4C66-8DEA-011CBDEF5097}" WorkerProcessSupported="true">
+
+      <Implements>
+        <InterfaceGroup>
+          <Filter>
+            <VisualizerId RequiredValue="{0F04C1DA-82CB-4DA4-847C-F3DCD001912C}"/> <!-- should be same GUID in natvis -->
+          </Filter>
+          <Interface Name="IDkmCustomVisualizer"/>
+        </InterfaceGroup>
+      </Implements>
+      
+    </Class>
+    
+  </NativeComponent>
+</Configuration>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="14.0">
+  <PropertyGroup>
+    <VisualiserBinariesDir>$(SolutionDir)\x64\$(Configuration)\</VisualiserBinariesDir>
+    <VisualiserSourceDir>$(SolutionDir)\DieselVisualiser\</VisualiserSourceDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <VSIXSourceItem Include="$(VisualiserBinariesDir)DieselVisualiser.vsdconfig"/>
+    <VSIXSourceItem Include="$(VisualiserSourceDir)DieselVisualiser.natvis"/>
+    <VSIXSourceItem Include="$(VisualiserBinariesDir)DieselVisualiser.dll">
+      <VSIXSubPath>x64</VSIXSubPath>
+    </VSIXSourceItem>
+    
+  </ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+LIBRARY "DieselVisualiser.dll"
+
+EXPORTS
+  DllCanUnloadNow   PRIVATE
+  DllGetClassObject PRIVATE

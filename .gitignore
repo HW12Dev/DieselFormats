@@ -1,0 +1,12 @@
+.vscode
+.xmake
+build
+vsxmake2022
+bundle_db.blb
+hashlist.txt
+
+# can't include these in a public git repository, they're not mine to redistribute
+test_files
+
+*.vcxproj.user
+*.csproj.user
