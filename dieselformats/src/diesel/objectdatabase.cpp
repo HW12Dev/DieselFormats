@@ -2,9 +2,23 @@
 
 #include "diesel/modern/hashlist.h"
 
+#include <cassert>
+
 /// REMOVE
 #include <iostream>
 #include <set>
+
+unsigned int diesel::typeidclasses::channel_size[diesel::typeidclasses::ChannelType::CT_COUNT] = {
+  0,
+  4,
+  8,
+  0x0C,
+  0x10,
+  4,
+  4,
+  8,
+  0xC,
+};
 
 namespace diesel {
   ObjectDatabase::ObjectDatabase(Reader& reader2, diesel::EngineVersion version) {
@@ -18,13 +32,13 @@ namespace diesel {
 
     int32_t size = 0;
     if (count == -1) {
-      count = reader.ReadType<int32_t>();
       size = reader.ReadType<int32_t>();
+      count = reader.ReadType<int32_t>();
     }
 
-    this->_object_list.reserve(size);
+    this->_object_list.reserve(count);
 
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < count; i++) {
       auto type_id = reader.ReadType<TypeId>();
       auto ref_id = reader.ReadType<RefId>();
 
@@ -67,6 +81,29 @@ namespace diesel {
     if (typeId == typeids::Model)
       return new Model();
 
+    if (typeId == typeids::Material)
+      return new Material();
+
+    if (typeId == typeids::MaterialGroup)
+      return new MaterialGroup();
+
+    if (typeId == typeids::Topology)
+      return new Topology();
+
+    if (typeId == typeids::Geometry)
+      return new Geometry();
+
+    if (typeId == typeids::Animatable)
+      return new Animatable();
+
+    if (typeId == typeids::AnimationData)
+      return new AnimationData();
+
+    if (typeId == typeids::TopologyIP)
+      return new TopologyIP();
+    if (typeId == typeids::PassThroughGP)
+      return new PassThroughGP();
+
     static std::set<TypeId> reportedTypeIds;
 
     if (reportedTypeIds.find(typeId) == reportedTypeIds.end()) {
@@ -105,6 +142,8 @@ namespace diesel {
 
 #undef TYPE_ID_ENTRY
 }
+
+#pragma region Persistent Object Classes
 
 diesel::typeidclasses::PersistentObject::PersistentObject() {
 #ifndef NDEBUG
@@ -155,6 +194,9 @@ void diesel::typeidclasses::Animatable::load(Reader& reader, ReferenceMap& ref_m
 
 void diesel::typeidclasses::Object3D::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
   Animatable::load(reader, ref_map, version);
+  
+  if(version == EngineVersion::BALLISTICS)
+    reader.AddPosition(sizeof(Matrix4)); // Ballistics has another matrix read to this + 88
 
   reader.ReadBytesToBuffer(&this->_local_tm, sizeof(this->_local_tm));
   reader.ReadBytesToBuffer(&this->_local_tm.t, sizeof(this->_local_tm.t));
@@ -163,15 +205,118 @@ void diesel::typeidclasses::Object3D::load(Reader& reader, ReferenceMap& ref_map
   ref_map.load_ref(parent_refid, &this->_parent);
 }
 
-void diesel::typeidclasses::Model::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) { // dsl::Model::load from PAYDAY 2 Linux
-  Object3D::load(reader, ref_map, version);
+void diesel::typeidclasses::Material::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  PersistentObject::load(reader, ref_map, version);
 
-  auto unk1 = reader.ReadType<uint32_t>();
+  reader.ReadType<uint32_t>(); // dummy_int
+  reader.ReadType<uint32_t>(); // dummy_int
+  reader.AddPosition(0x10); // dummy_colour
+  reader.AddPosition(0x10); // dummy_colour
+  reader.ReadType<float>(); // dummy_float
+  reader.ReadType<float>(); // dummy_float
+  static_assert((sizeof(uint32_t) * 2 + 0x10 * 2 + sizeof(float) * 2) == 48);
 
-  if (unk1 == 6) {
-    return;
+
+  auto num_textures = reader.ReadType<uint32_t>();
+
+  // TODO: continue
+}
+
+void diesel::typeidclasses::MaterialGroup::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  auto material_count = reader.ReadType<uint32_t>();
+
+  this->_materials.reserve(material_count);
+
+  for (int i = 0; i < material_count; i++) {
+    auto refid = reader.ReadType<RefId>();
+
+    auto& ref_value = this->_materials.emplace_back(nullptr);
+
+    ref_map.load_ref(refid, &ref_value);
+  }
+}
+
+
+void diesel::typeidclasses::AnimationData::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  PersistentObject::load(reader, ref_map, version);
+
+  this->start_time = reader.ReadType<float>();
+  this->end_time = reader.ReadType<float>();
+
+  auto animatable_count = reader.ReadType<uint32_t>();
+  for (int i = 0; i < animatable_count; i++) {
+    auto animatable_refid = reader.ReadType<RefId>();
+
+    auto& ref_value = this->_animatable_list.emplace_back(nullptr);
+
+    ref_map.load_ref(animatable_refid, &ref_value);
+  }
+}
+
+
+diesel::typeidclasses::Geometry::~Geometry() {
+  delete[] this->_vertices;
+}
+
+void diesel::typeidclasses::Geometry::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  auto _size = reader.ReadType<uint32_t>();
+
+  auto channel_count = reader.ReadType<uint32_t>();
+
+  int offset = 0;
+  for (int i = 0; i < channel_count; i++) {
+    auto type = reader.ReadType<ChannelType>();
+    auto component = reader.ReadType<VertexComponent>();
+
+    this->_format.push_back(GeometryProducerChannelDesc{ .type = type, .component = component });
+
+    this->_channel_offset.push_back(offset);
+
+    assert(type != ChannelType::CT_UNINITIALIZED);
+
+    this->_vertex_size += channel_size[type];
+
+    offset += channel_size[type];
   }
 
-  auto geometryProducerRefId = reader.ReadType<RefId>();
-  auto indexProducerRefId = reader.ReadType<RefId>();
+  this->_vertices = new char[this->_vertex_size * _size];
+
+  reader.ReadBytesToBuffer(this->_vertices, this->_vertex_size * _size);
+
+  PersistentObject::load(reader, ref_map, version); // name can be not present (check if the buffer has ended)
 }
+
+void diesel::typeidclasses::Topology::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  this->_type = reader.ReadType<IndexProducer::Type>();
+
+  auto _num_indices = reader.ReadType<uint32_t>();
+
+  this->_indices.reserve(_num_indices);
+
+  for (int i = 0; i < _num_indices; i++) {
+    this->_indices.push_back(reader.ReadType<uint16_t>());
+  }
+
+  auto num_groupings = reader.ReadType<uint32_t>();
+
+  for (int i = 0; i < num_groupings; i++) {
+    this->_groupings.push_back(reader.ReadType<uint8_t>());
+  }
+
+  PersistentObject::load(reader, ref_map, version); // name can be not present (check if the buffer has ended)
+}
+
+void diesel::typeidclasses::TopologyIP::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  auto topology_refid = reader.ReadType<RefId>();
+
+  ref_map.load_ref(topology_refid, &this->_topology);
+}
+
+void diesel::typeidclasses::PassThroughGP::load(Reader& reader, ReferenceMap& ref_map, diesel::EngineVersion version) {
+  auto geometry_refid = reader.ReadType<RefId>();
+  ref_map.load_ref(geometry_refid, &this->_geometry);
+  auto topology_refid = reader.ReadType<RefId>();
+  ref_map.load_ref(topology_refid, &this->_topology);
+}
+
+#pragma endregion

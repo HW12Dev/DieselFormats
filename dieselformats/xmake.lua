@@ -9,6 +9,7 @@ target("DieselFormats")
   add_includedirs("./src")
   add_files("./src/**.cpp")
   add_headerfiles("./src/**.h")
+  add_headerfiles("./DieselFormats.natvis")
 
   add_defines("WIN32_LEAN_AND_MEAN")
 

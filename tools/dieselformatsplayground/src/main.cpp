@@ -344,9 +344,9 @@ void CopyMultiFileTransport() {
 }
 
 int main() {
-  //Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
-  //diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
-
+  Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
+  diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
+  hashlist.Close();
 
 
   /*Reader reader1("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsa\\stream_default_0_h.bundle");
@@ -363,7 +363,7 @@ int main() {
   reader2.SetPosition(0);*/
 
 
-  diesel::modern::Bundle bundle("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\", "", diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  //diesel::modern::Bundle bundle("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\", "", diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
 
   /*diesel::modern::blobtypes::PackageBundle package("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsa\\ff03667ec101addd_h.bundle", reader2, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
   Reader reader3;
@@ -375,8 +375,8 @@ int main() {
   Writer out("./plane_black_temp.unit");
   out.WriteBytes(buf, siz);
   delete[] buf;*/
-  return 0;
-  /*Reader bdbreader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\all.blb");
+  
+  /*Reader bdbreader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsb\\all.blb");
   diesel::modern::BundleDatabase bdb(bdbreader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);*/
 
   /*std::set<unsigned int> keys;
@@ -406,7 +406,12 @@ int main() {
 
   std::set<unsigned int> missing_keys;
 
-  std::set_difference(bdb_keys.begin(), bdb_keys.end(), keys.begin(), keys.end(), std::inserter(missing_keys, missing_keys.end()));*/
+  std::set_difference(bdb_keys.begin(), bdb_keys.end(), keys.begin(), keys.end(), std::inserter(missing_keys, missing_keys.end()));
+
+  for (auto& missing_key : missing_keys) {
+    std::cout << "Missing key: " << missing_key << "\n";
+  }
+  std::cout << "Missing " << missing_keys.size() << " keys!\n";*/
   
 
   /*for (std::filesystem::recursive_directory_iterator i(assetsPath), end; i != end; ++i) {
@@ -453,7 +458,8 @@ int main() {
 
   //AddDummyPackageFileToRaid();
 
-  //Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\units\\vanilla\\props\\prop_bucket_metal\\prop_bucket_metal.model");
-  //diesel::ObjectDatabase odb(model, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+  Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\units\\vanilla\\props\\prop_bucket_metal\\prop_bucket_metal.model");
+  //Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\core\\units\\run_sequence_dummy\\run_sequence_dummy.model");
+  diesel::ObjectDatabase odb(model, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
   return 0;
 }

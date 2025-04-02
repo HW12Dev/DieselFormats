@@ -95,7 +95,9 @@ void BundleDBLoadingPanel::BrowsePathButtonPressed() {
 
 BundleDBLookup::BundleDBLookup() {
   this->setWindowTitle("Bundle Database Lookup");
-  this->setWindowIcon(QIcon("X:\\Projects\\DieselEngineExplorer\\lookuptool\\icon-white.png"));
+  this->setWindowIcon(QIcon("./icon-white.png"));
+
+  this->BundleDBLoaded(nullptr);
 
   this->mainLayout = new QVBoxLayout(this);
   this->setLayout(this->mainLayout);
@@ -150,6 +152,8 @@ BundleDBLookup::BundleDBLookup() {
 }
 
 BundleDBLookup::~BundleDBLookup() {
+  if (this->loadedBdb)
+    delete this->loadedBdb;
   delete this->bdbLoadingPanel;
 }
 
@@ -163,6 +167,10 @@ void BundleDBLookup::closeEvent(QCloseEvent* event) {
 }
 
 void BundleDBLookup::BundleDBLoaded(diesel::modern::BundleDatabase* bdb) {
+  if (this->loadedBdb) {
+    delete this->loadedBdb;
+    this->loadedBdb = nullptr;
+  }
   this->loadedBdb = bdb;
   this->UpdateIndexLookup();
   this->UpdateFileNameLookup();
