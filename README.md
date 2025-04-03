@@ -14,6 +14,12 @@ Hashlist paths for this tool need to be hardcoded for now, anybody wishing to us
 ### Diesel Lookup Tool
 Background process that can be summoned to a window via a tray icon that allows easy Idstring lookups and lookups into Bundle Database contents. (written with Qt6)
 
+### XMB Parser
+Command line tool to dump Legacy Diesel XMB files to text-based XML.
+
+### BANDITS Decryptor
+Command line tool to decrypt/encrypt assets for BANDITS - Phoenix Rising (.enc file extension).
+
 ## License
 Code in this repository is either written purposefully for use in this repository, or derived solely from reverse engineering various Diesel Engine games and is licensed under the MIT License.
 
