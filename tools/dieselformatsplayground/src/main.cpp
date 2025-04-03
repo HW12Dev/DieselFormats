@@ -464,10 +464,25 @@ int main() {
   //diesel::ObjectDatabase odb(model, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
   //Reader xmb("X:\\SteamLibrary\\steamapps\\common\\Lead and Gold Gangs of the Wild West\\bundles\\quick\\compiled\\win32\\data\\settings\\graphic_quality.xmb");
-  Reader xmb("X:\\SteamLibrary\\steamapps\\common\\Bionic Commando\\bundles\\quick\\compiled\\win32\\data\\settings\\unit_editor_macros.xmb");
+  /*Reader xmb("X:\\SteamLibrary\\steamapps\\common\\Bionic Commando\\bundles\\quick\\compiled\\win32\\data\\settings\\unit_editor_macros.xmb");
   diesel::lag::XMLDocument xml;
   xml.ReadFromBinary(xmb, diesel::EngineVersion::BIONIC_COMMANDO);
 
-  std::cout << xml.DumpRootToString() << "\n";
+  std::cout << xml.DumpRootToString() << "\n";*/
+
+
+
+  /*Reader banditsEncrypted("C:\\Program Files (x86)\\PanVision\\BANDITS - Phoenix Rising\\data\\menu\\Main\\Main.dsf.enc");
+  Reader banditsEncrypted("C:\\Program Files (x86)\\PanVision\\BANDITS - Phoenix Rising\\data\\maps\\mission01\\map.dsf.enc");
+  Reader unencrypted;
+  banditsEncrypted.ReadBANDITSEncryptedFile(unencrypted);
+  auto siz = unencrypted.GetFileSize();
+  char* encrypted_data = new char[siz+1] {};
+  encrypted_data[siz] = '\x00';
+  unencrypted.ReadBytesToBuffer(encrypted_data, siz);
+
+  std::cout << encrypted_data << std::endl;
+
+  delete[] encrypted_data;*/
   return 0;
 }

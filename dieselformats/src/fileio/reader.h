@@ -100,6 +100,15 @@ public:
   /// <param name="outReader"></param>
   void ReadCompressed(Reader& outReader);
 
+  /// <summary>
+  /// Read's a BANDITS - Phoenix Rising .enc file to the provided buffer.
+  /// This does not include a null terminator.
+  /// 
+  /// More information about BANDITS' encryption implementation can be found in the implementation of this function.
+  /// </summary>
+  /// <param name="outReader"></param>
+  void ReadBANDITSEncryptedFile(Reader& outReader);
+
   bool Valid() const;
 private:
   bool isFileBased;

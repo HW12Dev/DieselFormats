@@ -175,6 +175,52 @@ void Reader::ReadCompressed(Reader& outReader) {
   outReader = Reader(uncompressed, uncompressedSize);
 }
 
+///
+/// BANDITS - Phoenix Rising contains a .enc format used to store certain DieselScript and XML files ({original_extension}.enc)
+/// 
+/// The encryption method is quite simple:
+/// It is a list of values to Xor the original data against (the encryption key), and a counter to keep track of where it is in the key.
+/// After it reaches index 32 it rolls over back to zero and continues iterating on the buffer until it reaches the end.
+/// 
+/// The implementation can be found in BANDITS in the third entry of the dsl::EncryptedArchiveTokenizer virtual function table (Runtime Type Information is left enabled in BANDITS, so the only hurdle is SafeDisc)
+/// 
+/// To be able to view the implementation free of SafeDisc's encryption, you need to use a debugger like x32dbg on the executable (You will need to use ScyllaHide to get around SafeDisc's anti-debugger).
+/// Place a breakpoint at the beginning of the address specified in the virtual function table.
+/// Once this breakpoint has been hit, the function bytecode should be visible in your debugger.
+/// You can now dump the executable using Scylla (or the equivalent in your debugger) to get an executable you can use in the reverse engineering software of your choice.
+/// 
+/// For those wishing to have BANDITS use your non-encrypted, edited files instead of the encrypted ones: BANDITS will load any file instead of the encrypted version if the filename is the same, but without ".enc" at the end.
+///
+
+// Really an array of chars, making it an array of ints removes compiler warnings
+int BANDITSXorEncryptionKey[] = { 0xDE, 0x5E, 0xDA, 0x07,
+                  0xBB, 0x96, 0x42, 0x40,
+                  0xB4, 0xEB, 0x64, 0xAD,
+                  0x6D, 0x8C, 0x24, 0x40,
+                  0x83, 0xEB, 0x3B, 0x3D,
+                  0xD6, 0x16, 0x1E, 0x97,
+                  0xB5, 0x70, 0x79, 0xD9,
+                  0x04, 0xED, 0x2B, 0x7E,
+};
+
+void Reader::ReadBANDITSEncryptedFile(Reader& outReader) {
+  auto fileSize = this->GetFileSize();
+  char* data = new char[fileSize];
+  this->ReadBytesToBuffer(data, fileSize);
+
+  int keyIndex = 0;
+
+  for (int i = 0; i < fileSize; i++) {
+    data[i] = data[i] ^ (char)BANDITSXorEncryptionKey[keyIndex];
+
+    keyIndex++;
+    if (keyIndex >= 32) // could probably be: "data[i] ^ BANDITSXorEncryptionKey[keyIndex % sizeof(encryptionKey)]" instead of this
+      keyIndex = 0;
+  }
+
+  outReader = Reader(data, fileSize);
+}
+
 bool Reader::Valid() const
 {
   return this->container != nullptr;

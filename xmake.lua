@@ -7,6 +7,7 @@ includes("dieselformats")
 
 includes("tools/lookuptool")
 includes("tools/xmbparser")
+includes("tools/banditsdecryptor")
 
 target("DieselFormatsPlayground")
   set_languages("cxxlatest")
