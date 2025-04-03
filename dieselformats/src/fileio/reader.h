@@ -89,6 +89,9 @@ public:
     return value;
   }
 
+  /// <summary>
+  /// Reads a null terminated string starting at the current position in the buffer.
+  /// </summary>
   std::string ReadString();
 
   /// <summary>

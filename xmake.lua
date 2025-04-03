@@ -6,6 +6,7 @@ add_requires("qt6widgets")
 includes("dieselformats")
 
 includes("tools/lookuptool")
+includes("tools/xmbparser")
 
 target("DieselFormatsPlayground")
   set_languages("cxxlatest")

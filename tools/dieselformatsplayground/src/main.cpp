@@ -1,4 +1,5 @@
 #include "fileio/reader.h"
+#include "diesel/lag/xml.h"
 #include "diesel/modern/bundle.h"
 #include "diesel/modern/hashlist.h"
 #include "diesel/objectdatabase.h"
@@ -344,9 +345,9 @@ void CopyMultiFileTransport() {
 }
 
 int main() {
-  Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
+  /*Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
   diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
-  hashlist.Close();
+  hashlist.Close();*/
 
 
   /*Reader reader1("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsa\\stream_default_0_h.bundle");
@@ -458,8 +459,15 @@ int main() {
 
   //AddDummyPackageFileToRaid();
 
-  Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\units\\vanilla\\props\\prop_bucket_metal\\prop_bucket_metal.model");
+  //Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\units\\vanilla\\props\\prop_bucket_metal\\prop_bucket_metal.model");
   //Reader model("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\core\\units\\run_sequence_dummy\\run_sequence_dummy.model");
-  diesel::ObjectDatabase odb(model, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+  //diesel::ObjectDatabase odb(model, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+
+  //Reader xmb("X:\\SteamLibrary\\steamapps\\common\\Lead and Gold Gangs of the Wild West\\bundles\\quick\\compiled\\win32\\data\\settings\\graphic_quality.xmb");
+  Reader xmb("X:\\SteamLibrary\\steamapps\\common\\Bionic Commando\\bundles\\quick\\compiled\\win32\\data\\settings\\unit_editor_macros.xmb");
+  diesel::lag::XMLDocument xml;
+  xml.ReadFromBinary(xmb, diesel::EngineVersion::BIONIC_COMMANDO);
+
+  std::cout << xml.DumpRootToString() << "\n";
   return 0;
 }
