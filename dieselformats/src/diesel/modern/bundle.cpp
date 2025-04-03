@@ -8,6 +8,13 @@
 namespace diesel {
   namespace modern {
 
+    bool diesel::modern::ResourceID::operator<(const diesel::modern::ResourceID& b) const { // Diesel contains no implementation for this, an implementation is provided for use with C++ standard library containers.
+      if (this->type < b.type)
+        return true;
+      return this->name < b.name;
+    }
+
+
     template<typename T>
     Vector<T>::Vector(Reader& reader, ModernEngineVersion version) {
       if (IsEngineVersion32Bit(version)) {
@@ -112,8 +119,17 @@ namespace diesel {
 
     namespace blobtypes {
       const std::vector<diesel::modern::ResourceID>& PackageBundle::GetResources() { return this->resources; }
-      PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& reader, ModernEngineVersion version) :Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
+      PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& inReader, ModernEngineVersion version) : Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
         this->sourceFile = source;
+
+        Reader reader;
+        if (version == diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST) {
+          inReader.ReadCompressed(reader);
+        }
+        else {
+          reader = inReader;
+        }
+
         auto start = reader.GetPosition();
         auto size = reader.ReadType<uint32_t>();
 

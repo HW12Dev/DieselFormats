@@ -53,6 +53,8 @@ namespace diesel {
     struct ResourceID {
       Idstring type;
       Idstring name;
+
+      bool operator<(const ResourceID& other) const;
     };
 
     class Transport {
