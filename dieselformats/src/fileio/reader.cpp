@@ -80,7 +80,8 @@ unsigned long long MemoryReaderContainer::GetFileSize() {
 }
 
 unsigned long long MemoryReaderContainer::ReadBytesToBuffer(char* outBuffer, std::size_t size, unsigned long long position) {
-  memcpy(outBuffer, &this->data[position], size);
+  if (!(position + size > this->GetFileSize()))
+    memcpy(outBuffer, &this->data[position], size);
 
   return size;
 }

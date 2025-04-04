@@ -1,4 +1,5 @@
 #include "diesel/modern/bundle.h"
+#include "fileio/zlibcompression.h"
 
 #include <cassert>
 
@@ -217,6 +218,9 @@ namespace diesel {
     Bundle::Bundle(const std::filesystem::path& basePath, const std::string& name, ModernEngineVersion version) : Transport(version) {
       this->basePath = basePath;
       this->name = name;
+
+      assert(((version != ModernEngineVersion::PAYDAY_2_SWITCH || version != ModernEngineVersion::PAYDAY_2_XB1_PS4) && "Reading PAYDAY 2 Console bundles is unsupported due to annoying decompression problems"));
+
       if (version == ModernEngineVersion::PAYDAY_THE_HEIST_V1) { // dsl::Bundle::Bundle
         for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) {
           auto filePath = basePath / (name + "_" + std::to_string(i_bundle_file) + ".bundle");
@@ -293,6 +297,8 @@ namespace diesel {
             for (int i = 0; i < unk1_size; i++) {
               auto dbKey = reader.ReadType<uint32_t>();
               auto uncompressedSize = reader.ReadType<uint32_t>();
+
+              this->_raid_uncompressed_sizes.insert({ dbKey, uncompressedSize });
             }
 
             if (bundle_type == "init")
@@ -318,7 +324,7 @@ namespace diesel {
       }
     }
 
-    bool Bundle::open(Reader& outReader, unsigned int dbKey) {
+    bool Bundle::open(Reader& outReader, unsigned int dbKey) { // dsl::Bundle::open from PAYDAY: The Heist v1 and RAID: World War II (Function signature as of U24.4: "\x48\x89\x5C\x24\x00\x55\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x81\xEC\x00\x00\x00\x00\x41\x8B\xD8" "xxxx?xxxxxxxxxxxxxx????xxx")
       for (int i = 0; i < this->_pdth_headers.size(); i++) {
         auto header = this->_pdth_headers[i];
 
@@ -332,6 +338,39 @@ namespace diesel {
             outReader.SetReplacementSize(pair.second.size);
 
             return true;
+          }
+        }
+      }
+
+      for (int i = 0; i < this->_raid_stream_default_headers.size() + this->_raid_stream_init_headers.size(); i++) { // RAID: World War II is assumed
+        // Horrifying loop to make use of both lists in one block of code.
+
+        bool isDefault = i < this->_raid_stream_default_headers.size();
+
+        int bundleIndex = isDefault ? i : i - this->_raid_stream_default_headers.size();
+
+        auto header = isDefault ? this->_raid_stream_default_headers[bundleIndex] : this->_raid_stream_init_headers[bundleIndex];
+
+        for (int j = 0; j < header->size(); j++) {
+          auto& pair = (*header)[j];
+          if (pair.first == dbKey) {
+
+            auto filePath = basePath / (std::string("stream_") + (isDefault ? "default" : "init") + "_" + std::to_string(bundleIndex) + ".bundle");
+
+            Reader bundleReader(filePath);
+            bundleReader.SetPosition(pair.second.offset);
+            bundleReader.SetReplacementSize(pair.second.size);
+
+            char* compressed = new char[pair.second.size];
+            bundleReader.ReadBytesToBuffer(compressed, pair.second.size);
+
+            unsigned int uncompressedSize = this->_raid_uncompressed_sizes[dbKey];
+            char* uncompressed = new char[uncompressedSize];
+
+            compression::ZlibDecompression::DecompressBuffer(compressed, pair.second.size, uncompressed, uncompressedSize);
+
+            outReader = Reader(uncompressed, uncompressedSize);
+            delete[] compressed;
           }
         }
       }

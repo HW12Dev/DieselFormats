@@ -69,10 +69,8 @@ void BundleDBLoadingPanel::LoadButtonPressed() {
 
   auto path = this->pathEntry->text();
   if (QFile(path).exists()) {
-    if (loadedBundleDatabase)
-      delete loadedBundleDatabase;
 
-    Reader bdbReader(path.toStdString());
+    Reader bdbReader(path.toStdWString());
     this->loadedBundleDatabase = new diesel::modern::BundleDatabase(bdbReader, version);
 
     bdbReader.Close();
@@ -88,8 +86,8 @@ void BundleDBLoadingPanel::BrowsePathButtonPressed() {
   fileDialog.setFileMode(QFileDialog::ExistingFile);
 
   if (fileDialog.exec()) {
-    QString selectedFile;
-    this->pathEntry->setText(fileDialog.selectedFiles()[0]);
+    QString selectedFile = fileDialog.selectedFiles()[0];
+    this->pathEntry->setText(selectedFile);
   }
 }
 
@@ -97,6 +95,7 @@ BundleDBLookup::BundleDBLookup() {
   this->setWindowTitle("Bundle Database Lookup");
   this->setWindowIcon(QIcon("./icon-white.png"));
 
+  this->loadedBdb = nullptr;
   this->BundleDBLoaded(nullptr);
 
   this->mainLayout = new QVBoxLayout(this);

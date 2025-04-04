@@ -6,6 +6,7 @@
 #include "diesel/modern/hash.h"
 
 #include <vector>
+#include <unordered_map>
 #include <filesystem>
 
 namespace diesel {
@@ -120,6 +121,7 @@ namespace diesel {
       // NOTE: RAID very likely stores them in one vector instead of two
       std::vector<HeaderVectorType*> _raid_stream_default_headers;
       std::vector<HeaderVectorType*> _raid_stream_init_headers;
+      std::unordered_map<unsigned int, unsigned int> _raid_uncompressed_sizes;
     };
 
     class BundleDatabase { // proper name for the "bundle_db.blb" format is "Diesel Bundle Database" (thanks RAID Modding Tools)

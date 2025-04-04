@@ -363,8 +363,34 @@ int main() {
   delete[] buf;
   reader2.SetPosition(0);*/
 
+  /*diesel::modern::Bundle bundle("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\", "", diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);*/
 
-  //diesel::modern::Bundle bundle("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\", "", diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+
+  /*Writer w8("./player_uk_gear_default_001_nm.dds");
+  Reader r9;
+  bundle.open(r9, 23543);
+  w8.WriteReader(r9);
+  w8.Close();*/
+
+  /*Reader testReader1;
+  Reader testReader2;
+  std::cout << "2170: " << bdb.GetLookupInformationFromDBKey(2170)._name << "." << bdb.GetLookupInformationFromDBKey(2170)._type << "\n";
+  bundle.open(testReader1, 2170);
+  std::cout << "2191: " << bdb.GetLookupInformationFromDBKey(2191)._name << "." << bdb.GetLookupInformationFromDBKey(2191)._type << "\n";
+  bundle.open(testReader2, 2191);
+
+  Writer w1("./vehicle_explosion.effect");
+  w1.WriteReader(testReader1);
+  w1.Close();
+  Writer w2("./props_sc250_junkers_destructable.object");
+  w2.WriteReader(testReader2);
+  w2.Close();*/
+
+  /*Reader testReader3;
+  bundle.open(testReader3, 43);
+  Writer w3("./dome_occ_test.texture");
+  w3.WriteReader(testReader3);
+  w3.Close();*/
 
   /*diesel::modern::blobtypes::PackageBundle package("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsa\\ff03667ec101addd_h.bundle", reader2, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
   Reader reader3;

@@ -1,4 +1,4 @@
-add_requires("zlib")
+add_requires("zlib v1.3.1")
 
 target("DieselFormats")
   set_kind("static")
