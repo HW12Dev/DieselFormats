@@ -16,86 +16,6 @@ namespace diesel {
     }
 
 
-    template<typename T>
-    Vector<T>::Vector(Reader& reader, ModernEngineVersion version) {
-      if (IsEngineVersion32Bit(version)) {
-        this->_size = (unsigned long long)reader.ReadType<uint32_t>();
-        this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
-        this->_data = (unsigned long long)reader.ReadType<uint32_t>();
-        reader.AddPosition(4); // _allocator
-      }
-      else {
-        this->_size = reader.ReadType<uint64_t>();
-        this->_capacity = reader.ReadType<uint64_t>();
-        this->_data = reader.ReadType<uint64_t>();
-        reader.AddPosition(8); // _allocator
-      }
-    }
-
-    template<typename T>
-    void Vector<T>::Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer) {
-      if (IsEngineVersion32Bit(version)) {
-        writer.WriteType<uint32_t>(size);
-        writer.WriteType<uint32_t>(capacity);
-
-        outPositionOfDataPointerInBuffer = writer.GetPosition();
-        writer.WriteType<uint32_t>(0);
-
-        writer.AddPosition(4); // _allocator
-      }
-      else {
-        writer.WriteType<uint64_t>(size);
-        writer.WriteType<uint64_t>(capacity);
-
-        outPositionOfDataPointerInBuffer = writer.GetPosition();
-        writer.WriteType<uint64_t>(0);
-
-        
-        writer.AddPosition(8); // _allocator
-      }
-    }
-
-    template<typename Key, typename Value>
-    SortMap<Key, Value>::SortMap(Reader& reader, ModernEngineVersion version) {
-      if (IsEngineVersion32Bit(version)) {
-        reader.AddPosition(4); // _less
-      }
-      else {
-        reader.AddPosition(8); // _less
-      }
-      this->_data = Vector<Pair<Key, Value>>(reader, version);
-
-      this->_is_sorted = (bool)reader.ReadType<uint8_t>();
-
-      if (IsEngineVersion32Bit(version)) { // class alignment shenanigans
-        reader.AddPosition(3);
-      }
-      else {
-        reader.AddPosition(7);
-      }
-    }
-
-    template<typename Key, typename Value>
-    void SortMap<Key, Value>::Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer) {
-      if (IsEngineVersion32Bit(version)) {
-        writer.AddPosition(4);
-      }
-      else {
-        writer.AddPosition(8);
-      }
-
-      Vector<Pair<Key, Value>>::Write(writer, version, size, capacity, outPositionOfDataPointerInBuffer);
-
-      writer.WriteType<uint8_t>(is_sorted);
-
-      if (IsEngineVersion32Bit(version)) { // class alignment
-        writer.AddPosition(3);
-      }
-      else {
-        writer.AddPosition(7);
-      }
-    }
-
 #pragma region Transports
 
     MultiFileTransport::MultiFileTransport(const std::filesystem::path& basePath, diesel::modern::ModernEngineVersion version) : Transport(version) {
@@ -490,7 +410,6 @@ namespace diesel {
       return DBExtKey{ ._type = Idstring(-1), ._name = Idstring(-1), ._properties = (unsigned int)-1};
     }
     int BundleDatabase::GetDBKeyFromTypeAndName(const Idstring& type, const Idstring& name) {
-
       for (int i = 0; i < this->_lookup.size(); i++) {
         auto& entry = this->_lookup[i];
         if (entry.first._type == type && entry.first._name == name) {
@@ -501,9 +420,14 @@ namespace diesel {
       return -1;
     }
 
+    const std::vector<std::pair<Idstring, unsigned int>>& BundleDatabase::GetProperties() {
+      return this->_properties;
+    }
+
     const std::vector<std::pair<DBExtKey, unsigned int>>& BundleDatabase::GetLookup() {
       return this->_lookup;
     }
+
     void BundleDatabase::AddFile(DBExtKey extKey, unsigned int dbKey) {
       this->_lookup.push_back(std::make_pair(extKey, dbKey));
 

@@ -47,5 +47,11 @@ namespace diesel {
 
       return out1;
     }
+
+    String::String(Reader& reader, ModernEngineVersion version) {
+      reader.AddPosition(IsEngineVersion32Bit(version) ? 4 : 8); // _allocator (dsl::Allocator*)
+
+      this->_s = IsEngineVersion32Bit(version) ? reader.ReadType<uint32_t>() : reader.ReadType<uint64_t>();
+    }
   }
 }

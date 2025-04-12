@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+
+#include "fileio/reader.h"
+
 namespace diesel {
   typedef int EngineVersionBaseType;
   enum class EngineVersion : EngineVersionBaseType {
@@ -42,6 +46,46 @@ namespace diesel {
     Vector3 t;
     float tw;
   };
+
+  template<typename T>
+  class InplaceArray { // used in legacy blob serialisation
+  public:
+    InplaceArray() : _n(-1), _data(-1) {}
+    InplaceArray(Reader& reader, EngineVersion version);
+
+  public:
+    unsigned long long _n; // int
+    unsigned long long _data; // T*
+  };
+  template<typename Key, typename Value>
+  class InplaceMap { // used in legacy blob serialisation
+  public:
+    InplaceMap(Reader& reader, EngineVersion version);
+
+  public:
+    InplaceArray<Key> _keys;
+    InplaceArray<Value> _values;
+  };
+
+  class InplaceString { // used in legacy blob serialisation
+  public:
+    InplaceString(Reader& reader, EngineVersion version);
+
+  public:
+    unsigned long long _s;
+  };
+
+  template<typename T>
+  InplaceArray<T>::InplaceArray(Reader& reader, EngineVersion version) {
+    this->_n = reader.ReadType<uint32_t>();
+    this->_data = reader.ReadType<uint32_t>();
+  }
+
+  template<typename Key, typename Value>
+  InplaceMap<Key, Value>::InplaceMap(Reader& reader, EngineVersion version) {
+    this->_keys = InplaceArray<Key>(reader, version);
+    this->_values = InplaceArray<Value>(reader, version);
+  }
 
   bool operator==(EngineVersion a, EngineVersion b);
   bool operator!=(EngineVersion a, EngineVersion b);

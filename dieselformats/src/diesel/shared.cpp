@@ -1,5 +1,7 @@
 #include "diesel/shared.h"
 
+#include "fileio/reader.h"
+
 namespace diesel {
   bool operator==(EngineVersion a, EngineVersion b) {
     return (EngineVersionBaseType)a == (EngineVersionBaseType)b;
@@ -13,6 +15,11 @@ namespace diesel {
   bool operator>(EngineVersion a, EngineVersion b) {
     return (EngineVersionBaseType)a > (EngineVersionBaseType)b;
   }
+
+  InplaceString::InplaceString(Reader& reader, EngineVersion version) {
+    this->_s = reader.ReadType<uint32_t>();
+  }
+
 }
 
 static_assert(sizeof(diesel::Vector3) == 0xC);

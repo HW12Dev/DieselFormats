@@ -1,4 +1,4 @@
-#pragma
+#pragma once
 
 #include "fileio/reader.h"
 #include "fileio/writer.h"
@@ -15,33 +15,6 @@ namespace diesel {
     const unsigned int TypeId_PackageBundle = 0x19b7461f;
     const unsigned int TypeId_BundleHeader = 0xebfcc5f8;
 
-    template<typename T>
-    class Vector{
-    public:
-      Vector() = default;
-      Vector(Reader& reader, ModernEngineVersion version);
-
-      static void Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer);
-
-    public:
-      unsigned long long _size;
-      unsigned long long _capacity;
-      unsigned long long _data; // for blobs: offset from the beginning of the buffer to the start of where the data pointer normally points to. e.g. T* real_data = (buffer_start + _data)
-    };
-    template<typename Key, typename Value>
-    class Pair {};
-    template<typename Key, typename Value>
-    class SortMap {
-    public:
-      SortMap() = default;
-      SortMap(Reader& reader, ModernEngineVersion version);
-
-      static void Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer);
-
-    public:
-      Vector<Pair<Key, Value>> _data;
-      bool _is_sorted;
-    };
 
     struct DBExtKey {
       Idstring _type;
@@ -135,6 +108,8 @@ namespace diesel {
 
       DBExtKey GetLookupInformationFromDBKey(unsigned int key);
       int GetDBKeyFromTypeAndName(const Idstring& type, const Idstring& name);
+
+      const std::vector<std::pair<Idstring, unsigned int>>& GetProperties();
 
       const std::vector<std::pair<DBExtKey, unsigned int>>& GetLookup();
 

@@ -41,7 +41,8 @@ void Writer::WriteBytes(char* inBuffer, std::size_t size) {
 }
 
 void Writer::WriteReader(Reader& reader) {
-  auto size = reader.GetFileSize() - reader.GetPosition();
+  //auto size = reader.GetFileSize() - reader.GetPosition(); // Line causes crashes if reading a file stream with replacement size set and position is greater than replacement size.
+  auto size = reader.GetFileSize();
 
   char* buffer = new char[size];
   reader.ReadBytesToBuffer(buffer, size);

@@ -1,6 +1,8 @@
 #include "fileio/reader.h"
 #include "diesel/lag/xml.h"
+#include "diesel/lag/font.h"
 #include "diesel/modern/bundle.h"
+#include "diesel/font.h"
 #include "diesel/modern/hashlist.h"
 #include "diesel/objectdatabase.h"
 
@@ -349,6 +351,37 @@ int main() {
   diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
   hashlist.Close();*/
 
+  /*Reader bdbReader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\bundle_db.blb");
+  diesel::modern::BundleDatabase bdb(bdbReader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  bdbReader.Close();
+
+  Reader editorReader(std::string("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\") + diesel::modern::Idstring("core/packages/editor").hex() + "_h.bundle");
+  diesel::modern::blobtypes::PackageBundle editor("", editorReader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  editorReader.Close();
+
+  for (auto& resource : editor.GetResources()) {
+    auto key = bdb.GetDBKeyFromTypeAndName(resource.type, resource.name);
+
+    std::string type;
+    std::string name;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.type, type);
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.name, name);
+
+    std::cout << name << "." << type << "\n";
+
+  }*/
+
+  //Reader raidfontReader("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\core\\fonts\\nice_editor_font.font");
+  //diesel::AngelCodeFont raidfont(raidfontReader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+  //Reader pd2fontReader("X:\\Projects\\DieselEngineExplorer\\test_files\\fonts\\pd2\\nice_editor_font.font");
+  //diesel::AngelCodeFont pd2font(pd2fontReader, diesel::EngineVersion::PAYDAY_2_LATEST);
+  //Reader lagAbcFont("X:\\Projects\\DieselEngineExplorer\\test_files\\fonts\\lag\\bcfont_14.abc");
+  //diesel::lag::FontMakerFont lagAbcFontLoaded(lagAbcFont, diesel::EngineVersion::LEAD_AND_GOLD);
+
+  //Reader blbFont("X:\\Projects\\DieselEngineExplorer\\test_files\\fonts\\lag\\bcfont_11.blb");
+  //diesel::AngelCodeFont fnt(blbFont, diesel::EngineVersion::LEAD_AND_GOLD);
+
+  return 0;
 
   /*Reader reader1("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assetsa\\stream_default_0_h.bundle");
 
