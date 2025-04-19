@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cassert>
 
 #include "fileio/reader.h"
 #include "fileio/writer.h"
@@ -8,27 +9,12 @@
 
 namespace diesel {
   namespace modern {
-    enum class ModernEngineVersion : EngineVersionBaseType {
-      INVALID_NOT_MODERN = 0, // used for conversion between the generic EngineVersion enum
-      PAYDAY_THE_HEIST_V1 = 1,
-      PAYDAY_THE_HEIST_LATEST,
-      PAYDAY_2_LATEST,
-      PAYDAY_2_XB1_PS4, // XB1, PS4 and Switch might all share 1 base engine version, but they are seperate for now
-      PAYDAY_2_SWITCH,
-      PAYDAY_2_LINUX_LATEST,
-      RAID_WORLD_WAR_II_LATEST
-    };
-
-    ModernEngineVersion ToModernVersion(diesel::EngineVersion version);
-    diesel::EngineVersion ToGenericVersion(ModernEngineVersion version);
-
-    bool IsEngineVersion32Bit(ModernEngineVersion version);
 
     std::string hex(const char* bytes, int n);
     
     class String {
     public:
-      String(Reader& reader, ModernEngineVersion version);
+      String(Reader& reader, const DieselFormatsLoadingParameters& version);
 
     public:
       unsigned long long _s;
@@ -38,9 +24,9 @@ namespace diesel {
     class Vector {
     public:
       Vector() = default;
-      Vector(Reader& reader, ModernEngineVersion version);
+      Vector(Reader& reader, const DieselFormatsLoadingParameters& version);
 
-      static void Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer);
+      static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer);
 
     public:
       unsigned long long _size;
@@ -53,9 +39,9 @@ namespace diesel {
     class SortMap {
     public:
       SortMap() = default;
-      SortMap(Reader& reader, ModernEngineVersion version);
+      SortMap(Reader& reader, const DieselFormatsLoadingParameters& version);
 
-      static void Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer);
+      static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer);
 
     public:
       Vector<Pair<Key, Value>> _data;
@@ -65,24 +51,33 @@ namespace diesel {
     
 
     template<typename T>
-    Vector<T>::Vector(Reader& reader, ModernEngineVersion version) {
-      if (IsEngineVersion32Bit(version)) {
+    Vector<T>::Vector(Reader& reader, const DieselFormatsLoadingParameters& version) {
+      if (version.version == EngineVersion::PAYDAY_2_LINUX_LATEST) { // PAYDAY 2 Linux stores everything except pointers the same way as 32bit PAYDAY 2 for windows
+        this->_size = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_data = (unsigned long long)reader.ReadType<uint64_t>();
+        reader.AddPosition(8); // _allocator
+      }
+      else if(version.version == EngineVersion::RAID_WORLD_WAR_II_LATEST) { // 64 bit engine version (RAID: World War II)
+        this->_size = reader.ReadType<uint64_t>();
+        this->_capacity = reader.ReadType<uint64_t>();
+        this->_data = reader.ReadType<uint64_t>();
+        reader.AddPosition(8); // _allocator
+      }
+      else if (AreLoadParameters32Bit(version)) { // 32 bit engine version (PAYDAY: The Heist, PAYDAY 2)
         this->_size = (unsigned long long)reader.ReadType<uint32_t>();
         this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
         this->_data = (unsigned long long)reader.ReadType<uint32_t>();
         reader.AddPosition(4); // _allocator
       }
       else {
-        this->_size = reader.ReadType<uint64_t>();
-        this->_capacity = reader.ReadType<uint64_t>();
-        this->_data = reader.ReadType<uint64_t>();
-        reader.AddPosition(8); // _allocator
+        assert("Engine version is not 32bit, but isn't RAID or PD2 Linux");
       }
     }
 
     template<typename T>
-    void Vector<T>::Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer) {
-      if (IsEngineVersion32Bit(version)) {
+    void Vector<T>::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer) {
+      if (AreLoadParameters32Bit(version)) {
         writer.WriteType<uint32_t>(size);
         writer.WriteType<uint32_t>(capacity);
 
@@ -104,8 +99,8 @@ namespace diesel {
     }
 
     template<typename Key, typename Value>
-    SortMap<Key, Value>::SortMap(Reader& reader, ModernEngineVersion version) {
-      if (IsEngineVersion32Bit(version)) {
+    SortMap<Key, Value>::SortMap(Reader& reader, const DieselFormatsLoadingParameters& version) {
+      if (AreLoadParameters32Bit(version)) {
         reader.AddPosition(4); // _less
       }
       else {
@@ -115,7 +110,7 @@ namespace diesel {
 
       this->_is_sorted = (bool)reader.ReadType<uint8_t>();
 
-      if (IsEngineVersion32Bit(version)) { // class alignment shenanigans
+      if (AreLoadParameters32Bit(version)) { // class alignment shenanigans
         reader.AddPosition(3);
       }
       else {
@@ -124,8 +119,8 @@ namespace diesel {
     }
 
     template<typename Key, typename Value>
-    void SortMap<Key, Value>::Write(Writer& writer, ModernEngineVersion version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer) {
-      if (IsEngineVersion32Bit(version)) {
+    void SortMap<Key, Value>::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t capacity, bool is_sorted, uint64_t& outPositionOfDataPointerInBuffer) {
+      if (AreLoadParameters32Bit(version)) {
         writer.AddPosition(4);
       }
       else {
@@ -136,7 +131,7 @@ namespace diesel {
 
       writer.WriteType<uint8_t>(is_sorted);
 
-      if (IsEngineVersion32Bit(version)) { // class alignment
+      if (AreLoadParameters32Bit(version)) { // class alignment
         writer.AddPosition(3);
       }
       else {
@@ -145,5 +140,3 @@ namespace diesel {
     }
   }
 }
-bool operator==(const diesel::modern::ModernEngineVersion a, const diesel::modern::ModernEngineVersion b);
-bool operator!=(const diesel::modern::ModernEngineVersion a, const diesel::modern::ModernEngineVersion b);

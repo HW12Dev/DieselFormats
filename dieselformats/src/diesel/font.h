@@ -30,12 +30,12 @@ namespace diesel {
   class AngelCodeFont { // technically AngelCodeFont::Data, as no texture data is processed here
   public:
     // Reader must belong to a .font or .blb font file. The provided engine version will be used to determine which version to load.
-    AngelCodeFont(Reader& reader, EngineVersion version);
+    AngelCodeFont(Reader& reader, const DieselFormatsLoadingParameters& version);
   private:
     // Loads .blb font files
-    void load_from_legacy(Reader& reader, EngineVersion version);
+    void load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version);
     // Loads .font files
-    void load_from_modern(Reader& reader, modern::ModernEngineVersion version);
+    void load_from_modern(Reader& reader, const DieselFormatsLoadingParameters& version);
 
   private:
     std::vector<Glyph> _glyphs;
@@ -74,7 +74,7 @@ namespace diesel {
   class FontMakerFont {
   public:
     // Reader must belong to a .abc file.
-    FontMakerFont(Reader& reader, EngineVersion version);
+    FontMakerFont(Reader& reader, const DieselFormatsLoadingParameters& version);
 
   private:
     int _texture_height;

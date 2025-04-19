@@ -33,12 +33,12 @@ namespace diesel {
 
     class Transport {
     public:
-      Transport(diesel::modern::ModernEngineVersion version) : engineVersion(version){}
+      Transport(const DieselFormatsLoadingParameters& version) : engineVersion(version){}
       virtual ~Transport() = default;
       virtual bool open(Reader& outReader, unsigned int dbKey) = 0;
 
     protected:
-      diesel::modern::ModernEngineVersion engineVersion;
+      const DieselFormatsLoadingParameters& engineVersion;
       std::filesystem::path basePath;
     };
 
@@ -46,7 +46,7 @@ namespace diesel {
       class Bundle {};
       class PackageBundle : public Transport {
       public:
-        PackageBundle(const std::filesystem::path& source, Reader& reader, ModernEngineVersion version);
+        PackageBundle(const std::filesystem::path& source, Reader& reader, const DieselFormatsLoadingParameters& version);
 
       public:
         virtual bool open(Reader& outReader, unsigned int dbKey);
@@ -64,7 +64,7 @@ namespace diesel {
 
     class MultiFileTransport : public Transport { // used in production for asset packaging but is still available to use in release builds of diesel games.
     public:
-      MultiFileTransport(const std::filesystem::path& basePath, diesel::modern::ModernEngineVersion version);
+      MultiFileTransport(const std::filesystem::path& basePath, const DieselFormatsLoadingParameters& version);
     public:
       virtual bool open(Reader& outReader, unsigned int dbKey);
 
@@ -80,7 +80,7 @@ namespace diesel {
 
       typedef std::vector<std::pair<unsigned int, diesel::modern::Bundle::BundleEntry>> HeaderVectorType;
     public:
-      Bundle(const std::filesystem::path& basePath, const std::string& name, ModernEngineVersion version);
+      Bundle(const std::filesystem::path& basePath, const std::string& name, const DieselFormatsLoadingParameters& version);
       ~Bundle();
     public:
       virtual bool open(Reader& outReader, unsigned int dbKey);
@@ -99,10 +99,10 @@ namespace diesel {
 
     class BundleDatabase { // proper name for the "bundle_db.blb" format is "Diesel Bundle Database" (thanks RAID Modding Tools)
     public:
-      BundleDatabase(Reader& reader, ModernEngineVersion version);
+      BundleDatabase(Reader& reader, const DieselFormatsLoadingParameters& version);
 
 
-      void Write(Writer& writer, ModernEngineVersion version);
+      void Write(Writer& writer, const DieselFormatsLoadingParameters& version);
     public:
       void GetFileList(std::vector<ResourceID>& out);
 

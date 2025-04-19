@@ -18,7 +18,7 @@ namespace diesel {
 
 #pragma region Transports
 
-    MultiFileTransport::MultiFileTransport(const std::filesystem::path& basePath, diesel::modern::ModernEngineVersion version) : Transport(version) {
+    MultiFileTransport::MultiFileTransport(const std::filesystem::path& basePath, const DieselFormatsLoadingParameters& version) : Transport(version) {
       this->basePath = basePath;
     }
 
@@ -40,11 +40,11 @@ namespace diesel {
 
     namespace blobtypes {
       const std::vector<diesel::modern::ResourceID>& PackageBundle::GetResources() { return this->resources; }
-      PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& inReader, ModernEngineVersion version) : Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
+      PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& inReader, const DieselFormatsLoadingParameters& version) : Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
         this->sourceFile = source;
 
         Reader reader;
-        if (version == diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST) {
+        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
           inReader.ReadCompressed(reader);
         }
         else {
@@ -56,35 +56,38 @@ namespace diesel {
 
         diesel::modern::Vector<diesel::modern::Pair<unsigned int, unsigned int>> _header(reader, version);
 
-        reader.SetPosition(start + 4 + _header._data);
+        if (_header._data != 0) {
+          reader.SetPosition(start + 4 + _header._data);
 
-        for (int i = 0; i < _header._size; i++) {
-          auto db_key = reader.ReadType<uint32_t>();
-          auto unk1 = reader.ReadType<uint32_t>();
+          for (int i = 0; i < _header._size; i++) {
+            auto db_key = reader.ReadType<uint32_t>();
+            auto unk1 = reader.ReadType<uint32_t>();
 
-          this->header.push_back(std::make_pair(db_key, unk1));
+            this->header.push_back(std::make_pair(db_key, unk1));
+          }
         }
 
-        reader.ReadType<uint32_t>(); // header typeid
+        reader.ReadType<uint32_t>(); // header typeid (TypeId_BundleHeader)
 
         start = reader.GetPosition();
 
         size = reader.ReadType<uint32_t>();
 
-        diesel::modern::Vector<ResourceID> resources(reader, version);
+        diesel::modern::Vector<ResourceID> _resources(reader, version);
 
-        reader.SetPosition(start + 4 + resources._data);
-        
+        if (_resources._data != 0) {
+          reader.SetPosition(start + 4 + _resources._data);
 
-        for (int i = 0; i < resources._size; i++) {
-          diesel::modern::ResourceID resource{};
-          resource.type = reader.ReadType<uint64_t>();
-          resource.name = reader.ReadType<uint64_t>();
+          for (int i = 0; i < _resources._size; i++) {
+            diesel::modern::ResourceID resource{};
+            resource.type = reader.ReadType<uint64_t>();
+            resource.name = reader.ReadType<uint64_t>();
 
-          this->resources.push_back(resource);
+            this->resources.push_back(resource);
+          }
         }
 
-        reader.ReadType<uint32_t>(); // resources typeid
+        reader.ReadType<uint32_t>(); // resources typeid (TypeId_PackageBundle)
 
       }
       bool PackageBundle::open(Reader& outReader, unsigned int dbKey) {
@@ -108,7 +111,7 @@ namespace diesel {
           std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
           Reader finalReader(dataBundlePath);
 
-          if (this->engineVersion == ModernEngineVersion::RAID_WORLD_WAR_II_LATEST) {
+          if (this->engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
             finalReader.ReadCompressed(this->fileContents);
           }
           else {
@@ -135,13 +138,13 @@ namespace diesel {
       }
     }
 
-    Bundle::Bundle(const std::filesystem::path& basePath, const std::string& name, ModernEngineVersion version) : Transport(version) {
+    Bundle::Bundle(const std::filesystem::path& basePath, const std::string& name, const DieselFormatsLoadingParameters& version) : Transport(version) {
       this->basePath = basePath;
       this->name = name;
 
-      assert(((version != ModernEngineVersion::PAYDAY_2_SWITCH || version != ModernEngineVersion::PAYDAY_2_XB1_PS4) && "Reading PAYDAY 2 Console bundles is unsupported due to annoying decompression problems"));
+      assert(((version.sourcePlatform != diesel::FileSourcePlatform::NINTENDO_SWITCH && version.sourcePlatform != diesel::FileSourcePlatform::SONY_PLAYSTATION_4 && version.sourcePlatform != diesel::FileSourcePlatform::MICROSOFT_XBOX_ONE) && "Reading PAYDAY 2 Console bundles is unsupported due to annoying decompression problems"));
 
-      if (version == ModernEngineVersion::PAYDAY_THE_HEIST_V1) { // dsl::Bundle::Bundle
+      if (version.version == diesel::EngineVersion::PAYDAY_THE_HEIST_V1) { // dsl::Bundle::Bundle
         for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) {
           auto filePath = basePath / (name + "_" + std::to_string(i_bundle_file) + ".bundle");
 
@@ -149,12 +152,13 @@ namespace diesel {
             continue;
 
           Reader reader(filePath);
+          reader.SetSwapEndianness(diesel::ShouldSwapEndiannessForLoadParameters(version));
 
           auto header_size = reader.ReadType<uint32_t>();
 
           diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
 
-          reader.SetPosition(header._data._data);
+          reader.SetPosition(header._data._data + 4);
 
           HeaderVectorType* header_vector = new HeaderVectorType();
 
@@ -171,7 +175,7 @@ namespace diesel {
 
         }
       }
-      else if (version == ModernEngineVersion::RAID_WORLD_WAR_II_LATEST) { // dsl::Bundle::Bundle from RAID: World War II. Function signature (as of U24.4): "\x4C\x89\x4C\x24\x00\x4C\x89\x44\x24\x00\x48\x89\x54\x24\x00\x48\x89\x4C\x24\x00\x55\x53\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8D\xAC\x24" "xxxx?xxxx?xxxx?xxxx?xxxxxxxxxxxxxxxx" 
+      else if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) { // dsl::Bundle::Bundle from RAID: World War II. Function signature (as of U24.4): "\x4C\x89\x4C\x24\x00\x4C\x89\x44\x24\x00\x48\x89\x54\x24\x00\x48\x89\x4C\x24\x00\x55\x53\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8D\xAC\x24" "xxxx?xxxx?xxxx?xxxx?xxxxxxxxxxxxxxxx" 
         // "init" and "default" are the only options
         
         // This format is also apparently used on the console versions of PAYDAY 2
@@ -298,7 +302,7 @@ namespace diesel {
     }
 
 #pragma region bundle_db.blb
-    BundleDatabase::BundleDatabase(Reader& reader, ModernEngineVersion version) {
+    BundleDatabase::BundleDatabase(Reader& reader, const DieselFormatsLoadingParameters& version) {
       auto _properties = SortMap<Idstring, unsigned int>(reader, version);
       auto _lookup = SortMap<DBExtKey, unsigned int>(reader, version);
 
@@ -342,13 +346,13 @@ namespace diesel {
 
     }
 
-    void BundleDatabase::Write(Writer& writer, ModernEngineVersion version) {
+    void BundleDatabase::Write(Writer& writer, const DieselFormatsLoadingParameters& version) {
       uint64_t propertiesDataOffset = -1;
       SortMap<Idstring, unsigned int>::Write(writer, version, this->_properties.size(), this->_properties.size(), true, propertiesDataOffset);
       uint64_t lookupDataOffset = -1;
       SortMap<DBExtKey, unsigned int>::Write(writer, version, this->_lookup.size(), this->_lookup.size(), true, lookupDataOffset);
 
-      writer.AddPosition(IsEngineVersion32Bit(version) ? 4 : 8); // padding
+      writer.AddPosition(AreLoadParameters32Bit(version) ? 4 : 8); // padding
 
       auto propertiesData = writer.GetPosition();
       for (int i = 0; i < this->_properties.size(); i++) {
@@ -376,14 +380,14 @@ namespace diesel {
       writer.WriteType<uint32_t>(this->_next_key);
 
       writer.SetPosition(propertiesDataOffset);
-      if (IsEngineVersion32Bit(version)) {
+      if (AreLoadParameters32Bit(version)) {
         writer.WriteType<uint32_t>(propertiesData);
       }
       else {
         writer.WriteType<uint64_t>(propertiesData);
       }
       writer.SetPosition(lookupDataOffset);
-      if (IsEngineVersion32Bit(version)) {
+      if (AreLoadParameters32Bit(version)) {
         writer.WriteType<uint32_t>(lookupData);
       }
       else {

@@ -7,6 +7,7 @@ hashlist.txt
 
 # can't include these in a public git repository, they're not mine to redistribute
 test_files
+dont_distribute
 
 *.vcxproj.user
 *.csproj.user

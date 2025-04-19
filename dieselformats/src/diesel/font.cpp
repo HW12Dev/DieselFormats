@@ -9,16 +9,17 @@
 static_assert(sizeof(diesel::Glyph) == 10);
 
 namespace diesel {
-  AngelCodeFont::AngelCodeFont(Reader& reader, EngineVersion version) {
-    if (diesel::modern::ToModernVersion(version) == diesel::modern::ModernEngineVersion::INVALID_NOT_MODERN) {
+  AngelCodeFont::AngelCodeFont(Reader& reader, const DieselFormatsLoadingParameters& version) {
+    //if (diesel::modern::ToModernVersion(version.version) == diesel::modern::ModernEngineVersion::INVALID_NOT_MODERN) {
+    if (version.version < diesel::EngineVersion::MODERN_VERSION_START) {
       this->load_from_legacy(reader, version);
     }
     else {
-      this->load_from_modern(reader, diesel::modern::ToModernVersion(version));
+      this->load_from_modern(reader, version);
     }
   }
 
-  void AngelCodeFont::load_from_legacy(Reader& reader, EngineVersion version) { // AngelCodeFont::compile from Lead and Gold
+  void AngelCodeFont::load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version) { // AngelCodeFont::compile from Lead and Gold
     auto startPosition = reader.GetPosition();
 
     {// read BlobAllocator header
@@ -89,7 +90,7 @@ namespace diesel {
     this->_face = reader.ReadString();
   }
 
-  void AngelCodeFont::load_from_modern(Reader& reader, modern::ModernEngineVersion version) { // AngelCodeFont::Data::Data from PAYDAY: The Heist v1
+  void AngelCodeFont::load_from_modern(Reader& reader, const DieselFormatsLoadingParameters& version) { // AngelCodeFont::Data::Data from PAYDAY: The Heist v1
     auto startPosition = reader.GetPosition();
 
     diesel::modern::Vector<Glyph> glyphs(reader, version);
@@ -137,7 +138,7 @@ namespace diesel {
   }
 
   
-  FontMakerFont::FontMakerFont(Reader& reader, EngineVersion version) { // FontMakerFont::FontMakerFont from Lead and Gold
+  FontMakerFont::FontMakerFont(Reader& reader, const DieselFormatsLoadingParameters& version) { // FontMakerFont::FontMakerFont from Lead and Gold
     auto font_version = reader.ReadType<uint32_t>();
 
     static float texture_width = 0;

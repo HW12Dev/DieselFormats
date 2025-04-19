@@ -44,8 +44,10 @@ unsigned long long FileReaderContainer::ReadBytesToBuffer(char* outBuffer, std::
   //overlapped.Offset = LOWORD(this->position);
   //overlapped.OffsetHigh = HIWORD(this->position);
 
-  if (size + position > this->GetFileSize())
+  if (size + position > this->GetFileSize()) {
+    throw std::runtime_error("FileReaderContainer read beyond its size");
     return 0;
+  }
 
   DWORD bytesRead{};
   //ReadFile(this->file, outBuffer, (DWORD)size, &bytesRead, &overlapped);
@@ -80,8 +82,13 @@ unsigned long long MemoryReaderContainer::GetFileSize() {
 }
 
 unsigned long long MemoryReaderContainer::ReadBytesToBuffer(char* outBuffer, std::size_t size, unsigned long long position) {
-  if (!(position + size > this->GetFileSize()))
-    memcpy(outBuffer, &this->data[position], size);
+  if (position + size > this->GetFileSize()) {
+    throw std::runtime_error("MemoryReaderContainer read beyond its size");
+    memset(outBuffer, 0, size);
+    return 0;
+  }
+
+  memcpy(outBuffer, &this->data[position], size);
 
   return size;
 }
@@ -93,6 +100,7 @@ Reader::Reader() {
   this->container = nullptr;
   this->position = -1;
   this->replacementSize = -1;
+  this->swapEndiannessOfIntegers = false;
 }
 
 Reader::Reader(const std::filesystem::path& path) {
@@ -100,6 +108,7 @@ Reader::Reader(const std::filesystem::path& path) {
   this->container = std::make_shared<FileReaderContainer>(path);
   this->position = 0;
   this->replacementSize = -1;
+  this->swapEndiannessOfIntegers = false;
 }
 
 Reader::Reader(char* buffer, std::size_t size) {
@@ -107,22 +116,22 @@ Reader::Reader(char* buffer, std::size_t size) {
   this->container = std::make_shared<MemoryReaderContainer>(buffer, size);
   this->position = 0;
   this->replacementSize = -1;
+  this->swapEndiannessOfIntegers = false;
 }
 
 Reader::~Reader() {
 }
 
-Reader::Reader(const Reader& other)
-{
+Reader::Reader(const Reader& other) {
   *this = other;
 }
 
-Reader& Reader::operator=(const Reader& other)
-{
+Reader& Reader::operator=(const Reader& other) {
   this->isFileBased = other.isFileBased;
   this->container = other.container;
   this->position = other.position;
   this->replacementSize = other.replacementSize;
+  this->swapEndiannessOfIntegers = other.swapEndiannessOfIntegers;
 
   return *this;
 }
@@ -143,8 +152,16 @@ void Reader::SetReplacementSize(unsigned long long size) {
   this->replacementSize = size;
 }
 
+void Reader::SetSwapEndianness(bool swap) {
+  this->swapEndiannessOfIntegers = swap;
+}
+
+bool Reader::AtEndOfBuffer() {
+  return this->position >= this->GetFileSize();
+}
+
 void Reader::Close() {
-  if (this->container)
+  if (this->container && this->container.use_count() == 1)
     this->container->Close();
 }
 
@@ -230,11 +247,25 @@ bool Reader::Valid() const
 std::string Reader::ReadString() {
   std::string str = "";
 
-  char c = this->ReadType<char>();
+  char c = ReadType<char>();
   while (c != 0x00) {
     str += c;
-    c = this->ReadType<char>();
+    c = ReadType<char>();
   }
 
   return str;
+}
+
+std::string Reader::ReadLengthPrefixedString() {
+  auto stringLength = ReadType<uint32_t>();
+
+  // DANGER: Using this in the wrong place will allocate up to 4gb of memory at once.
+  char* str = new char[stringLength];
+  ReadBytesToBuffer(str, stringLength);
+
+  std::string cpp_str = std::string(str, str + stringLength);
+
+  delete[] str;
+
+  return cpp_str;
 }

@@ -36,11 +36,11 @@ BundleDBLoadingPanel::BundleDBLoadingPanel(QWidget* parent) : QWidget(parent) {
 
     this->gameVersionComboBox = new QComboBox(loadDetailsWidget);
 
-    this->gameVersionComboBox->addItem("PAYDAY: The Heist V1", QVariant((diesel::EngineVersionBaseType)diesel::modern::ModernEngineVersion::PAYDAY_THE_HEIST_V1));
-    this->gameVersionComboBox->addItem("PAYDAY: The Heist", QVariant((diesel::EngineVersionBaseType)diesel::modern::ModernEngineVersion::PAYDAY_THE_HEIST_LATEST));
-    this->gameVersionComboBox->addItem("PAYDAY: 2", QVariant((diesel::EngineVersionBaseType)diesel::modern::ModernEngineVersion::PAYDAY_2_LATEST));
-    this->gameVersionComboBox->addItem("PAYDAY: 2 Linux", QVariant((diesel::EngineVersionBaseType)diesel::modern::ModernEngineVersion::PAYDAY_2_LINUX_LATEST));
-    this->gameVersionComboBox->addItem("RAID: World War II", QVariant((diesel::EngineVersionBaseType)diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST));
+    this->gameVersionComboBox->addItem("PAYDAY: The Heist V1", QVariant((diesel::EngineVersionBaseType)diesel::EngineVersion::PAYDAY_THE_HEIST_V1));
+    this->gameVersionComboBox->addItem("PAYDAY: The Heist", QVariant((diesel::EngineVersionBaseType)diesel::EngineVersion::PAYDAY_THE_HEIST_LATEST));
+    this->gameVersionComboBox->addItem("PAYDAY: 2", QVariant((diesel::EngineVersionBaseType)diesel::EngineVersion::PAYDAY_2_LATEST));
+    this->gameVersionComboBox->addItem("PAYDAY: 2 Linux", QVariant((diesel::EngineVersionBaseType)diesel::EngineVersion::PAYDAY_2_LINUX_LATEST));
+    this->gameVersionComboBox->addItem("RAID: World War II", QVariant((diesel::EngineVersionBaseType)diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST));
     this->gameVersionComboBox->setCurrentIndex(4);
 
     this->loadButton = new QPushButton("Load", loadDetailsWidget);
@@ -65,12 +65,16 @@ diesel::modern::BundleDatabase* BundleDBLoadingPanel::GetLoadedBundleDatabase() 
 }
 
 void BundleDBLoadingPanel::LoadButtonPressed() {
-  diesel::modern::ModernEngineVersion version = (diesel::modern::ModernEngineVersion)this->gameVersionComboBox->currentData().toInt();
+  diesel::EngineVersion version = (diesel::EngineVersion)this->gameVersionComboBox->currentData().toInt();
 
   auto path = this->pathEntry->text();
   if (QFile(path).exists()) {
 
     Reader bdbReader(path.toStdWString());
+
+    diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters();
+    loadParams.version = version;
+    loadParams.sourcePlatform = (version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST ? diesel::FileSourcePlatform::WINDOWS_64 : (version == diesel::EngineVersion::PAYDAY_2_LINUX_LATEST) ? diesel::FileSourcePlatform::LINUX_64 : diesel::FileSourcePlatform::WINDOWS_32);
     this->loadedBundleDatabase = new diesel::modern::BundleDatabase(bdbReader, version);
 
     bdbReader.Close();

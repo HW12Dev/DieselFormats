@@ -1,30 +1,9 @@
 #include "diesel/modern/modern_shared.h"
 
-bool operator==(const diesel::modern::ModernEngineVersion a, const diesel::modern::ModernEngineVersion b) {
-  return (diesel::EngineVersionBaseType)a == (diesel::EngineVersionBaseType)b;
-}
-
-bool operator!=(const diesel::modern::ModernEngineVersion a, const diesel::modern::ModernEngineVersion b) {
-  return !(a == b);
-}
+#include <cassert>
 
 namespace diesel {
   namespace modern {
-      ModernEngineVersion ToModernVersion(diesel::EngineVersion version) {
-        diesel::EngineVersionBaseType val = (diesel::EngineVersionBaseType)version;
-
-        if (val < (diesel::EngineVersionBaseType)diesel::EngineVersion::MODERN_VERSION_START)
-          return ModernEngineVersion::INVALID_NOT_MODERN;
-
-        return (ModernEngineVersion)(val - (diesel::EngineVersionBaseType)diesel::EngineVersion::MODERN_VERSION_START);
-      }
-      diesel::EngineVersion ToGenericVersion(ModernEngineVersion version) {
-        return (diesel::EngineVersion)((EngineVersionBaseType)version + (EngineVersionBaseType)diesel::EngineVersion::MODERN_VERSION_START);
-      }
-      bool IsEngineVersion32Bit(ModernEngineVersion version) {
-      return version != ModernEngineVersion::RAID_WORLD_WAR_II_LATEST && version != ModernEngineVersion::PAYDAY_2_LINUX_LATEST;
-    }
-
     const char* hex_chars = "0123456789abcdef";
 
     std::string hex(const char* bytes, int n) {
@@ -32,6 +11,8 @@ namespace diesel {
       int i;
       char v6;
       char* v7;
+
+      assert((n * 2) < sizeof(out1) && "Input provided to diesel::modern::hex has too many bytes.");
 
       char* out = out1;
       for (i = n; i > 0; ++bytes) {
@@ -48,10 +29,10 @@ namespace diesel {
       return out1;
     }
 
-    String::String(Reader& reader, ModernEngineVersion version) {
-      reader.AddPosition(IsEngineVersion32Bit(version) ? 4 : 8); // _allocator (dsl::Allocator*)
+    String::String(Reader& reader, const DieselFormatsLoadingParameters& version) {
+      reader.AddPosition(AreLoadParameters32Bit(version) ? 4 : 8); // _allocator (dsl::Allocator*)
 
-      this->_s = IsEngineVersion32Bit(version) ? reader.ReadType<uint32_t>() : reader.ReadType<uint64_t>();
+      this->_s = AreLoadParameters32Bit(version) ? reader.ReadType<uint32_t>() : reader.ReadType<uint64_t>();
     }
   }
 }

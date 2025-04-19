@@ -1,15 +1,17 @@
 #include "fileio/reader.h"
 #include "diesel/lag/xml.h"
-#include "diesel/lag/font.h"
 #include "diesel/modern/bundle.h"
 #include "diesel/font.h"
 #include "diesel/modern/hashlist.h"
 #include "diesel/objectdatabase.h"
+#include "diesel/oil.h"
 
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <cassert>
+
+#pragma region Testing Functions
 
 void DumpBundle(diesel::modern::BundleDatabase& bundle_db) {
   std::vector<diesel::modern::ResourceID> resources;
@@ -24,7 +26,7 @@ void DumpBundle(diesel::modern::BundleDatabase& bundle_db) {
   }
 }
 
-void DumpBundleFile(std::string path, diesel::modern::ModernEngineVersion version) {
+void DumpBundleFile(std::string path, diesel::EngineVersion version) {
   Reader reader(path);
   diesel::modern::BundleDatabase bdb(reader, version);
   DumpBundle(bdb);
@@ -39,6 +41,7 @@ void replaceinstr(std::string& in, std::string find, std::string replace) {
 }
 
 const char* LuaDecryptionKey = "asljfowk4_5u2333crj";
+//const char* LuaDecryptionKey = ">S4?fo%k4_5u2(3_=cRj";
 auto LuaDecryptionKeyLen = strlen(LuaDecryptionKey);
 
 void copyfile(std::string source, std::string dest, bool lua) {
@@ -76,7 +79,7 @@ void AddDummyPackageFileToRaid() {
   auto bundleDbPath = "X:\\Projects\\DieselEngineExplorer\\bundle_db.blb";
   //auto bundleDbPath = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY The Heist\\assets\\all.blb";
   Reader bdbreader(bundleDbPath);
-  diesel::modern::BundleDatabase bdb(bdbreader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  diesel::modern::BundleDatabase bdb(bdbreader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
   unsigned int nextDBKey = 0;
 
@@ -103,7 +106,7 @@ void AddDummyPackageFileToRaid() {
 
   auto outBundleDbPath = "X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\all.blb";
   Writer modifiedBdb(outBundleDbPath);
-  bdb.Write(modifiedBdb, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  bdb.Write(modifiedBdb, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
 }
 
@@ -276,7 +279,7 @@ void DumpPackage(const std::filesystem::path& path) {
   reader1.ReadCompressed(reader2);
   reader1.Close();
 
-  diesel::modern::blobtypes::PackageBundle package(path, reader2, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  diesel::modern::blobtypes::PackageBundle package(path, reader2, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
   std::string pkgName = "";
 
@@ -297,7 +300,7 @@ void CopyMultiFileTransport() {
   //auto bundleDbPath = "X:\\Projects\\DieselEngineExplorer\\bundle_db.blb";
   //auto bundleDbPath = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY The Heist\\assets\\all.blb";
   Reader bdbreader(bundleDbPath);
-  diesel::modern::BundleDatabase bdba(bdbreader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
+  diesel::modern::BundleDatabase bdba(bdbreader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
   //diesel::modern::BundleDatabase bdb(bdbreader, diesel::modern::ModernEngineVersion::PAYDAY_THE_HEIST_V1);
 
@@ -346,10 +349,16 @@ void CopyMultiFileTransport() {
   logOut.close();
 }
 
+#pragma endregion
+
 int main() {
   /*Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
   diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
   hashlist.Close();*/
+
+  /*Reader idstring_lookup("X:\\Projects\\DieselEngineExplorer\\build\\windows\\x64\\release\\pdthps3\\idstring_lookup.idstring_lookup");
+  diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(idstring_lookup);
+  idstring_lookup.Close();*/
 
   /*Reader bdbReader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\bundle_db.blb");
   diesel::modern::BundleDatabase bdb(bdbReader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
@@ -380,6 +389,256 @@ int main() {
 
   //Reader blbFont("X:\\Projects\\DieselEngineExplorer\\test_files\\fonts\\lag\\bcfont_11.blb");
   //diesel::AngelCodeFont fnt(blbFont, diesel::EngineVersion::LEAD_AND_GOLD);
+
+  //Reader shaders("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\raid\\base.shaders");
+  //diesel::ObjectDatabase shadersObjdb(shaders, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST, diesel::Renderer::DIRECTX11);
+
+  //Reader pd2oglshadersrr("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux\\default_shaders.d3d10.shaders");
+  //diesel::ObjectDatabase pd2oglshadersa(pd2oglshadersrr, diesel::EngineVersion::PAYDAY_2_LINUX_LATEST, diesel::Renderer::DIRECTX10);
+  /*Reader pd2oglshadersr("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux\\base.ogl.shaders");
+  diesel::ObjectDatabase pd2oglshaders(pd2oglshadersr, diesel::EngineVersion::PAYDAY_2_LINUX_LATEST, diesel::Renderer::OPENGL);
+  pd2oglshadersr.Close();
+
+  diesel::typeidclasses::D3DShaderLibraryData* shaderLibrary;
+
+  for (auto object : pd2oglshaders.GetObjects()) {
+    if (object->type_id() == diesel::typeids::D3DShaderLibraryData) {
+      shaderLibrary = (diesel::typeidclasses::D3DShaderLibraryData*)object;
+      break;
+    }
+  }
+
+  for (auto& shader : shaderLibrary->_shaders) {
+    //std::string name;
+    //diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(shader.first, name);
+    //std::cout << name << std::endl;
+
+    for (auto& layer : shader.second->_layers) {
+      __debugbreak();
+    }
+  }
+
+  for (auto object : pd2oglshaders.GetObjects()) {
+    if (object->type_id() != diesel::typeids::D3DShaderData)
+      continue;
+
+    __debugbreak();
+  }
+
+  for (auto object : pd2oglshaders.GetObjects()) {
+    if (object->type_id() != diesel::typeids::D3DShaderPassData)
+      continue;
+
+    __debugbreak();
+  }*/
+
+  //Reader lagshadersr("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\lag\\d3d10_base_win32.diesel");
+  //diesel::ObjectDatabase lagshaders(lagshadersr, diesel::EngineVersion::LEAD_AND_GOLD, diesel::Renderer::DIRECTX10);
+  
+  //lagshadersr.Close();
+  
+  //Reader ps3terminatorshaders("D:\\Program Files (x86)\\Evolved Games\\Terminator Salvation\\bundles\\quick\\core\\shaders\\ps3\\default_shaders.diesel");
+  //diesel::objectdatabase::ObjectDatabase ps3terminator(ps3terminatorshaders, diesel::EngineVersion::TERMINATOR_SALVATION, diesel::FileSourcePlatform::WINDOWS_32, diesel::Renderer::PLAYSTATION3);
+  //Reader xb360terminatorshaders("D:\\Program Files (x86)\\Evolved Games\\Terminator Salvation\\bundles\\quick\\core\\shaders\\x360\\default_shaders.diesel");
+  //diesel::ObjectDatabase xb360terminator(xb360terminatorshaders, diesel::EngineVersion::TERMINATOR_SALVATION, diesel::Renderer::DIRECTX9);
+  //Reader winterminatorshaders("D:\\Program Files (x86)\\Evolved Games\\Terminator Salvation\\bundles\\quick\\core\\shaders\\win32_dx10\\default_shaders.diesel");
+  //diesel::ObjectDatabase winterminator(winterminatorshaders, diesel::EngineVersion::TERMINATOR_SALVATION, diesel::Renderer::DIRECTX10);
+
+  //Reader oilreader("X:\\Projects\\DieselEngineExplorer\\test_files\\oil\\raid\\anim_cube.model");
+  //diesel::oil::OIL oil(oilreader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+
+  /*diesel::DieselFormatsLoadingParameters pdthps3loadparams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_THE_HEIST_V1);
+  pdthps3loadparams.sourcePlatform = diesel::FileSourcePlatform::SONY_PLAYSTATION_3;
+
+  Reader ps3bdbr("E:\\torrented\\dieselgames\\PAYDAY The Heist - NPEA00331\\NPEA00331\\USRDIR\\assets\\all.blb");
+  ps3bdbr.SetSwapEndianness(true);
+  diesel::modern::BundleDatabase ps3bdb(ps3bdbr, pdthps3loadparams);*/
+  
+
+  /*std::ofstream filelist("./pdthps3files.txt");
+  for (auto& resource : ps3bdb.GetLookup()) {
+    std::string name;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.first._name, name);
+
+    //if (name.find("stone") == std::string::npos || name.find("cold") == std::string::npos)
+    //  continue;
+
+    std::string type;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.first._type, type);
+
+    filelist << name << "." << type << "\n";
+
+  }
+  filelist.close();*/
+
+  /*diesel::modern::Bundle bundle("E:\\torrented\\dieselgames\\PAYDAY The Heist - NPEA00331\\NPEA00331\\USRDIR\\assets", "all", pdthps3loadparams);
+
+
+  std::vector<diesel::modern::blobtypes::PackageBundle*> packages;
+
+  for (std::filesystem::recursive_directory_iterator i("E:\\torrented\\dieselgames\\PAYDAY The Heist - NPEA00331\\NPEA00331\\USRDIR\\assets"), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+      if (i->path().string().find("stream") != std::string::npos)
+        continue;
+
+      Reader r(i->path());
+      r.SetSwapEndianness(true);
+      packages.push_back(new diesel::modern::blobtypes::PackageBundle(i->path(), r, pdthps3loadparams));
+    }
+  }
+
+
+  std::filesystem::path outPath = "./pdthps3/";
+
+  std::map<unsigned int, std::string> propertymap;
+
+
+  for (auto property : ps3bdb.GetProperties()) {
+    std::string propstr;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(property.first, propstr);
+
+    propertymap.insert({ property.second, propstr });
+  }
+
+  for (auto package : packages) {
+    for (auto& resource : package->GetResources()) {
+      if (resource.name == diesel::modern::Idstring("settings/render_templates"))
+        __debugbreak();
+    }
+  }
+
+  for (auto& file : ps3bdb.GetLookup()) {
+    bool opened = false;
+    Reader fileContents;
+
+    opened = bundle.open(fileContents, file.second);
+
+    if (!opened) {
+      for (auto package : packages) {
+        opened = package->open(fileContents, file.second);
+        if (opened)
+          break;
+      }
+    }
+
+    if (!opened)
+      continue;
+
+    std::string name;
+    std::string type;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(file.first._name, name);
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(file.first._type, type);
+
+    std::string fileName;
+
+    fileName = name + ".";
+
+    if (file.first._properties != 0) {
+      for (auto& prop : propertymap) {
+        if ((file.first._properties & prop.first) != 0) {
+          fileName += prop.second + ".";
+        }
+      }
+    }
+    fileName += type;
+
+    std::filesystem::path outFilePath = outPath / fileName;
+
+    if (!std::filesystem::exists(outFilePath.parent_path()))
+      std::filesystem::create_directories(outFilePath.parent_path());
+
+    Writer outFileContents(outFilePath);
+    if (file.first._type != diesel::modern::Idstring("lua")) {
+      outFileContents.WriteReader(fileContents);
+    }
+    else {
+      auto fs = fileContents.GetFileSize();
+      char* buffer = new char[fs];
+      fileContents.ReadBytesToBuffer(buffer, fs);
+
+
+      for (int i = 0; i < fs; i++) {
+        //int keyIndex = ((fs + i) * 7) % LuaDecryptionKeyLen;
+        //buffer[i] ^= (char)(LuaDecryptionKey[keyIndex] * (fs - i));
+        buffer[i] ^= LuaDecryptionKey[i % LuaDecryptionKeyLen];
+      }
+
+      outFileContents.WriteBytes(buffer, fs);
+
+      delete[] buffer;
+
+    }
+    outFileContents.Close();
+  }*/
+
+
+  return 0;
+  /*std::vector<diesel::modern::blobtypes::PackageBundle*> packages;
+
+  for (std::filesystem::recursive_directory_iterator i("X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets"), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("_h.bundle") == std::string::npos)
+        continue;
+      if (i->path().string().find("stream") != std::string::npos)
+        continue;
+
+      Reader r(i->path());
+      packages.push_back(new diesel::modern::blobtypes::PackageBundle(i->path(), r, diesel::modern::ModernEngineVersion::PAYDAY_2_LATEST));
+    }
+  }
+
+  for (auto& package : packages) {
+    for (auto& resource : package->GetResources()) {
+      if (resource.type == diesel::modern::Idstring("shaders")) {
+        std::string name;
+        diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.name, name);
+        std::cout << name << std::endl;
+      }
+    }
+  }*/
+
+  /*Reader pd2linuxbdbr("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux\\pd2linuxassets\\assets\\bundle_db.blb");
+  diesel::modern::BundleDatabase pd2linuxbdb(pd2linuxbdbr, diesel::modern::ModernEngineVersion::PAYDAY_2_LINUX_LATEST);
+  pd2linuxbdbr.Close();
+
+
+  Reader pd2linuxcoreenginer("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux\\pd2linuxassets\\assets\\3b6c2da5af6f2e42_h.bundle");
+  diesel::modern::blobtypes::PackageBundle pd2linuxcoreengine("X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux\\pd2linuxassets\\assets\\3b6c2da5af6f2e42_h.bundle", pd2linuxcoreenginer, diesel::modern::ModernEngineVersion::PAYDAY_2_LINUX_LATEST);
+  pd2linuxcoreenginer.Close();
+
+  std::map<unsigned int, std::string> properties;
+  for (auto& property : pd2linuxbdb.GetProperties()) {
+    std::string name;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(property.first, name);
+    properties.insert({ property.second, name });
+  }
+
+  std::filesystem::path outPath = "X:\\Projects\\DieselEngineExplorer\\test_files\\shaders\\pd2linux";
+
+  for (auto& resource : pd2linuxbdb.GetLookup()) {
+    if (resource.first._type != diesel::modern::Idstring("shaders"))
+      continue;
+
+    std::string name;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(resource.first._name, name);
+
+    auto fileOut = outPath / (std::filesystem::path(name).filename().string() + "." + properties[resource.first._properties] + ".shaders");
+
+    Reader fileReader;
+    if (pd2linuxcoreengine.open(fileReader, resource.second)) {
+      Writer outFileWriter(fileOut);
+      outFileWriter.WriteReader(fileReader);
+      outFileWriter.Close();
+    }
+
+    std::cout << name << "(" << properties[resource.first._properties] << ")" << std::endl;
+  }*/
 
   return 0;
 

@@ -27,9 +27,9 @@ namespace diesel {
       char* hashlistBuf = new char[hashlistRawFileSize + 1];
       hashlistBuf[hashlistRawFileSize] = '\x00';
       reader.ReadBytesToBuffer(hashlistBuf, hashlistRawFileSize);
-      Reader hashlistReader(hashlistBuf, hashlistRawFileSize);
+      Reader hashlistReader(hashlistBuf, hashlistRawFileSize+1);
 
-      while (hashlistReader.GetPosition() <= hashlistReader.GetFileSize()) {
+      while (!hashlistReader.AtEndOfBuffer()) {
         std::string processed_str;
 
         char c = hashlistReader.ReadType<char>();

@@ -70,6 +70,9 @@ public:
   void AddPosition(long long addPos);
 
   void SetReplacementSize(unsigned long long size);
+  void SetSwapEndianness(bool swap);
+
+  bool AtEndOfBuffer();
 
   void Close();
 
@@ -88,11 +91,22 @@ public:
 
     return value;
   }
+  template<> uint16_t ReadType() { uint16_t value{}; ReadBytesToBuffer(&value, sizeof(uint16_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_ushort(value); return value; }
+  template<> uint32_t ReadType() { uint32_t value{}; ReadBytesToBuffer(&value, sizeof(uint32_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_ulong(value); return value; }
+  template<> uint64_t ReadType() { uint64_t value{}; ReadBytesToBuffer(&value, sizeof(uint64_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_uint64(value); return value; }
+  template<> int16_t ReadType() { int16_t value{}; ReadBytesToBuffer(&value, sizeof(int16_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_ushort(value); return value; }
+  template<> int32_t ReadType() { int32_t value{}; ReadBytesToBuffer(&value, sizeof(int32_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_ulong(value); return value; }
+  template<> int64_t ReadType() { int64_t value{}; ReadBytesToBuffer(&value, sizeof(int64_t)); if (this->swapEndiannessOfIntegers) value = _byteswap_uint64(value); return value; }
 
   /// <summary>
   /// Reads a null terminated string starting at the current position in the buffer.
   /// </summary>
   std::string ReadString();
+
+  /// <summary>
+  /// Reads a string with the length provided as a uint32_t at the current position in the buffer.
+  /// </summary>
+  std::string ReadLengthPrefixedString();
 
   /// <summary>
   /// Read's a modern Diesel formatted zlib compressed buffer from the input file into memory. (modern diesel format is "{uncompressedSize:u64}{compressedBufferSize:u32}{compressedBuffer:char[compressedBufferSize]}"
@@ -116,6 +130,8 @@ private:
   unsigned long long position;
 
   unsigned long long replacementSize; // optional size parameter, that can be set by diesel file loading functions to be the current size of the contained file
+
+  bool swapEndiannessOfIntegers;
 };
 
 //using FileReader = Reader;
