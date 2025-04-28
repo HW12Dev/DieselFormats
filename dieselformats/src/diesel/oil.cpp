@@ -67,6 +67,14 @@ namespace diesel {
     }
 
     namespace oiltypes {
+      ChunkBase* InstantiateEmptyChunkBaseFromType(ChunkType type) {
+        if (type == ChunkType::Node)
+          return new Node();
+        if (type == ChunkType::Mesh)
+          return new Mesh();
+        return nullptr;
+      }
+
       Mesh::Mesh() {
       }
       void Mesh::load(Reader& reader, const DieselFormatsLoadingParameters& version) {
@@ -131,8 +139,6 @@ namespace diesel {
           this->override_bounding_box_min_p = reader.ReadType<Vector3d>();
           this->override_bounding_box_max_p = reader.ReadType<Vector3d>();
         }
-
-        __debugbreak();
       }
       Node::Node() {
       }
@@ -147,6 +153,7 @@ namespace diesel {
 
         this->parent_id = reader.ReadType<int32_t>();
       }
+
     }
   }
 }

@@ -45,5 +45,11 @@ namespace diesel {
         processed_str = "";
       }
     }
+    void Hashlist::DumpHashlistToFile(Writer& writer) {
+      for (auto& hash : this->hashes) {
+        std::string toWrite = hash.second + "\n";
+        writer.WriteBytes((char*)toWrite.c_str(), toWrite.size());;
+      }
+    }
   }
 }

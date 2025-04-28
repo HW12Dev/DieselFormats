@@ -1,4 +1,5 @@
 #include "fileio/reader.h"
+#include "diesel/graw/dieselscript.h"
 #include "diesel/lag/xml.h"
 #include "diesel/modern/bundle.h"
 #include "diesel/font.h"
@@ -358,7 +359,11 @@ int main() {
 
   /*Reader idstring_lookup("X:\\Projects\\DieselEngineExplorer\\build\\windows\\x64\\release\\pdthps3\\idstring_lookup.idstring_lookup");
   diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(idstring_lookup);
-  idstring_lookup.Close();*/
+  idstring_lookup.Close();
+
+  Writer hash2("./savedhashlist.txt");
+  diesel::modern::GetGlobalHashlist()->DumpHashlistToFile(hash2);
+  hash2.Close();*/
 
   /*Reader bdbReader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II\\assets\\bundle_db.blb");
   diesel::modern::BundleDatabase bdb(bdbReader, diesel::modern::ModernEngineVersion::RAID_WORLD_WAR_II_LATEST);
@@ -446,6 +451,17 @@ int main() {
 
   //Reader oilreader("X:\\Projects\\DieselEngineExplorer\\test_files\\oil\\raid\\anim_cube.model");
   //diesel::oil::OIL oil(oilreader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+
+  diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::GRAW);
+
+  diesel::graw::DieselScript testdxe;
+  //Reader testdxereader("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\patch\\data\\unit_ext\\factory.dxe");
+  //testdxe.ReadCompiledDXE(testdxereader, loadParams);
+  //Reader testdxereadersetup("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\quick\\data\\lib\\setups\\setup.dxe");
+  //testdxe.ReadCompiledDXE(testdxereadersetup, loadParams);
+  //Reader testdxereadersetup("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\quick\\data\\lib\\utils\\dev\\toolbox.dxe");
+  Reader testdxereadersetup("X:\\Projects\\DieselEngineExplorer\\test_files\\grawdxe\\test.dxe");
+  testdxe.ReadCompiledDXE(testdxereadersetup, loadParams);
 
   /*diesel::DieselFormatsLoadingParameters pdthps3loadparams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_THE_HEIST_V1);
   pdthps3loadparams.sourcePlatform = diesel::FileSourcePlatform::SONY_PLAYSTATION_3;

@@ -37,20 +37,15 @@ namespace diesel {
       Composite_Rotation_Controller = 25,
     };
 
-    enum class DataChannelType : int32_t {
-      Vertex,
-      Texture_Vertex,
-      Normal,
-      Binormal,
-      Tangent,
-      Color,
-      Alpha,
-      Illumination,
-      Unique_Vertex
-    };
-
     namespace oiltypes {
-      class Node {
+
+      class ChunkBase {
+      public:
+        virtual void load(Reader& reader, const DieselFormatsLoadingParameters& version) = 0;
+      };
+      ChunkBase* InstantiateEmptyChunkBaseFromType(ChunkType type);
+
+      class Node : public ChunkBase {
       public:
         Node();
         void load(Reader& reader, const DieselFormatsLoadingParameters& version);
@@ -62,8 +57,19 @@ namespace diesel {
         Matrix4d pivot_transform;
         int32_t parent_id;
       };
-      class Mesh {
+      class Mesh : public ChunkBase {
       public:
+        enum class DataChannelType : int32_t {
+          Vertex,
+          Texture_Vertex,
+          Normal,
+          Binormal,
+          Tangent,
+          Color,
+          Alpha,
+          Illumination,
+          Unique_Vertex
+        };
         struct DataChannel {
           DataChannelType type;
           int32_t mapping_channel_index;

@@ -35,7 +35,8 @@ namespace diesel {
 
     std::string XMLDocument::DumpRootToString() {
       std::string str;
-      this->_root->DumpNodeAndChildrenToString(str);
+      if(this->_root)
+        this->_root->DumpNodeAndChildrenToString(str);
       return str;
     }
 

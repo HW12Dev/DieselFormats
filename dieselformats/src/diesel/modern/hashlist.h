@@ -28,6 +28,7 @@ namespace diesel {
       void AddSourceToHashlist(const char* str);
 
       void ReadFileToHashlist(Reader& reader);
+      void DumpHashlistToFile(Writer& writer);
 
     private:
       std::map<Idstring, std::string> hashes;
