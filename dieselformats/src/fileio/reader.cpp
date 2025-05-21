@@ -199,7 +199,7 @@ void Reader::ReadCompressedDataStore(Reader& outReader) {
     if (chunkSize < Diesel_CompressedDataStore_ChunkSize) { // compressed
       ReadBytesToBuffer(compressedChunkDataBuffer, chunkSize);
 
-      compression::ZlibDecompression::DecompressBuffer(compressedChunkDataBuffer, chunkSize, uncompressed + uncompressedPosition, uncompressedTotalSize);
+      compression::ZlibDecompression::DecompressBuffer(compressedChunkDataBuffer, chunkSize, uncompressed + uncompressedPosition, uncompressedTotalSize - uncompressedPosition);
       uncompressedPosition += Diesel_CompressedDataStore_ChunkSize;
     }
     else { // uncompressed
