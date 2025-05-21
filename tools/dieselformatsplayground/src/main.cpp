@@ -1,4 +1,5 @@
 #include "fileio/reader.h"
+#include "fileio/zlibcompression.h"
 #include "diesel/graw/dieselscript.h"
 #include "diesel/lag/xml.h"
 #include "diesel/modern/bundle.h"
@@ -277,7 +278,7 @@ void DumpPackage(const std::filesystem::path& path) {
   Reader reader1(path);
 
   Reader reader2;
-  reader1.ReadCompressed(reader2);
+  reader1.ReadCompressedDataStore(reader2);
   reader1.Close();
 
   diesel::modern::blobtypes::PackageBundle package(path, reader2, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
@@ -353,9 +354,10 @@ void CopyMultiFileTransport() {
 #pragma endregion
 
 int main() {
-  /*Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
-  diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
-  hashlist.Close();*/
+  return 0;
+  //Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
+  //diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
+  //hashlist.Close();
 
   /*Reader idstring_lookup("X:\\Projects\\DieselEngineExplorer\\build\\windows\\x64\\release\\pdthps3\\idstring_lookup.idstring_lookup");
   diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(idstring_lookup);
@@ -384,7 +386,7 @@ int main() {
     std::cout << name << "." << type << "\n";
 
   }*/
-
+  
   //Reader raidfontReader("X:\\Projects\\RAIDMultiFileTransport\\normalassets\\core\\fonts\\nice_editor_font.font");
   //diesel::AngelCodeFont raidfont(raidfontReader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
   //Reader pd2fontReader("X:\\Projects\\DieselEngineExplorer\\test_files\\fonts\\pd2\\nice_editor_font.font");
@@ -452,16 +454,168 @@ int main() {
   //Reader oilreader("X:\\Projects\\DieselEngineExplorer\\test_files\\oil\\raid\\anim_cube.model");
   //diesel::oil::OIL oil(oilreader, diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
 
-  diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::GRAW);
+  //diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE);
+  //loadParams.sourcePlatform = diesel::FileSourcePlatform::MICROSOFT_XBOX_360;
 
-  diesel::graw::DieselScript testdxe;
+  //Reader xb360bdbr("E:\\torrented\\dieselgames\\payday-2-demo-xbox-360\\extract\\assets\\all.blb");
+  //xb360bdbr.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadParams));
+  //diesel::modern::BundleDatabase xb360bdb(xb360bdbr, loadParams);
+
+
+  //diesel::modern::Bundle bundle("E:\\torrented\\payday-2-demo-xbox-360\\extract\\assets", "all", loadParams);
+
+
+  //std::vector<diesel::modern::blobtypes::PackageBundle*> packages;
+
+  //Reader testReader("E:\\torrented\\dieselgames\\payday-2-demo-xbox-360\\extract\\assets\\00d4033dd0221584_h.bundle");
+  //testReader.SetSwapEndianness(true);
+  ////diesel::modern::blobtypes::PackageBundle("E:\\torrented\\dieselgames\\payday-2-demo-xbox-360\\extract\\assets\\00d4033dd0221584_h.bundle", testReader, loadParams);
+  //Reader test2;
+  //testReader.ReadCompressedDataStore(test2);
+
+  /*{
+    Writer testWriter("./00d4033dd0221584_h.d.bundle");
+    Reader testReader("X:\\SteamLibrary\\steamapps\\common\\RAID World War II - Modding\\assets\\bundle_db.blb");
+    testWriter.SetSwapEndianness(false);
+    testWriter.WriteReaderToCompressedDataStore(testReader);
+    testWriter.Close();
+  }
+
+  {
+    Reader testWriterReader("./00d4033dd0221584_h.d.bundle");
+    Reader testWriterReader2;
+    testWriterReader.ReadCompressedDataStore(testWriterReader2);
+
+    Writer testWriterReaderWriter("./bundle_db_compresseddatastore_test.blb");
+    testWriterReaderWriter.WriteReader(testWriterReader2);
+    testWriterReaderWriter.Close();
+    testWriterReader.Close();
+  }*/
+
+  //char* data = new char[test2.GetFileSize()];
+  //test2.ReadBytesToBuffer(data, test2.GetFileSize());
+  //
+  //size_t compressedSize = compression::ZlibDecompression::GetRecommendedCompressionBufferSize(test2.GetFileSize());
+  //
+  //char* compressedData = new char[compressedSize];
+  //compression::ZlibDecompression::CompressBuffer(data, test2.GetFileSize(), compressedData, compressedSize, ZLIB_COMPRESSION_LEVEL_DEFAULT_COMPRESSION);
+
+  //return 0;
+
+  //testWriter.WriteReader(test2);
+  /*for (std::filesystem::recursive_directory_iterator i("E:\\torrented\\dieselgames\\payday-2-demo-xbox-360\\extract\\assets"), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+      if (i->path().string().find("stream") != std::string::npos)
+        continue;
+      if (i->path().string().find("_h") == std::string::npos)
+        continue;
+
+      Reader r(i->path());
+      r.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadParams));
+      packages.push_back(new diesel::modern::blobtypes::PackageBundle(i->path(), r, loadParams));
+    }
+  }*/
+
+
+  /*std::filesystem::path outPath = "./pd2xb360/";
+
+  std::map<unsigned int, std::string> propertymap;
+
+
+  for (auto property : xb360bdb.GetProperties()) {
+    std::string propstr;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(property.first, propstr);
+
+    propertymap.insert({ property.second, propstr });
+  }*/
+
+  /*for (auto package : packages) {
+    for (auto& resource : package->GetResources()) {
+      if (resource.name == diesel::modern::Idstring("settings/render_templates"))
+        __debugbreak();
+    }
+  }*/
+
+  /*for (auto& file : xb360bdb.GetLookup()) {
+    bool opened = false;
+    Reader fileContents;
+
+    //opened = bundle.open(fileContents, file.second);
+
+    if (!opened) {
+      for (auto package : packages) {
+        opened = package->open(fileContents, file.second);
+        if (opened)
+          break;
+      }
+    }
+
+    if (!opened)
+      continue;
+
+    std::string name;
+    std::string type;
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(file.first._name, name);
+    diesel::modern::GetGlobalHashlist()->FindSourceForIdstring(file.first._type, type);
+
+    std::string fileName;
+
+    fileName = name + ".";
+
+    if (file.first._properties != 0) {
+      for (auto& prop : propertymap) {
+        if ((file.first._properties & prop.first) != 0) {
+          fileName += prop.second + ".";
+        }
+      }
+    }
+    fileName += type;
+
+    std::filesystem::path outFilePath = outPath / fileName;
+
+    if (!std::filesystem::exists(outFilePath.parent_path()))
+      std::filesystem::create_directories(outFilePath.parent_path());
+
+    Writer outFileContents(outFilePath);
+    if (file.first._type != diesel::modern::Idstring("lua")) {
+      outFileContents.WriteReader(fileContents);
+    }
+    else {
+      auto fs = fileContents.GetFileSize();
+      char* buffer = new char[fs];
+      fileContents.ReadBytesToBuffer(buffer, fs);
+
+
+      for (int i = 0; i < fs; i++) {
+        //int keyIndex = ((fs + i) * 7) % LuaDecryptionKeyLen;
+        //buffer[i] ^= (char)(LuaDecryptionKey[keyIndex] * (fs - i));
+        buffer[i] ^= LuaDecryptionKey[i % LuaDecryptionKeyLen];
+      }
+
+      outFileContents.WriteBytes(buffer, fs);
+
+      delete[] buffer;
+
+    }
+    outFileContents.Close();
+  }*/
+
+  //return 0;
+
+  //diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::GRAW);
+
+  //diesel::graw::DieselScript testdxe;
   //Reader testdxereader("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\patch\\data\\unit_ext\\factory.dxe");
   //testdxe.ReadCompiledDXE(testdxereader, loadParams);
   //Reader testdxereadersetup("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\quick\\data\\lib\\setups\\setup.dxe");
   //testdxe.ReadCompiledDXE(testdxereadersetup, loadParams);
   //Reader testdxereadersetup("E:\\Program Files (x86)\\Ubisoft\\Ghost Recon Advanced Warfighter\\Bundles\\quick\\data\\lib\\utils\\dev\\toolbox.dxe");
-  Reader testdxereadersetup("X:\\Projects\\DieselEngineExplorer\\test_files\\grawdxe\\test.dxe");
-  testdxe.ReadCompiledDXE(testdxereadersetup, loadParams);
+  //Reader testdxereadersetup("X:\\Projects\\DieselEngineExplorer\\test_files\\grawdxe\\test.dxe");
+  //testdxe.ReadCompiledDXE(testdxereadersetup, loadParams);
 
   /*diesel::DieselFormatsLoadingParameters pdthps3loadparams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_THE_HEIST_V1);
   pdthps3loadparams.sourcePlatform = diesel::FileSourcePlatform::SONY_PLAYSTATION_3;
@@ -592,7 +746,7 @@ int main() {
   }*/
 
 
-  return 0;
+  //return 0;
   /*std::vector<diesel::modern::blobtypes::PackageBundle*> packages;
 
   for (std::filesystem::recursive_directory_iterator i("X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets"), end; i != end; ++i) {
@@ -818,5 +972,5 @@ int main() {
   std::cout << encrypted_data << std::endl;
 
   delete[] encrypted_data;*/
-  return 0;
+  //return 0;
 }

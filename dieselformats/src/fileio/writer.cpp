@@ -2,6 +2,8 @@
 
 #include "reader.h"
 
+#include "fileio/zlibcompression.h"
+
 Writer::Writer(const std::filesystem::path& path) {
 
   this->position = 0;
@@ -28,6 +30,10 @@ void Writer::AddPosition(long long pos) {
   this->position += pos;
 }
 
+void Writer::SetSwapEndianness(bool swap) {
+  this->swapEndiannessOfIntegers = swap;
+}
+
 void Writer::WriteBytes(char* inBuffer, std::size_t size) {
 
   DWORD bytesWritten{};
@@ -50,4 +56,52 @@ void Writer::WriteReader(Reader& reader) {
   this->WriteBytes(buffer, size);
 
   delete[] buffer;
+}
+
+void Writer::WriteReaderToCompressedDataStore(Reader& reader) {
+  auto uncompressedTotalSize = reader.GetFileSize();
+
+  this->WriteType<uint64_t>(uncompressedTotalSize);
+
+  unsigned int chunks = (unsigned int)(uncompressedTotalSize / Diesel_CompressedDataStore_ChunkSize);
+
+  char* uncompressedChunkDataBuffer = new char[Diesel_CompressedDataStore_ChunkSize] {};
+  char* compressedChunkDataBuffer = new char[Diesel_CompressedDataStore_ChunkSize * 2] {}; // Diesel reserves 0x20000
+
+  auto inputStartPosition = reader.GetPosition();
+
+  for (unsigned int i = 0; i < chunks; i++) {
+    reader.ReadBytesToBuffer(uncompressedChunkDataBuffer, Diesel_CompressedDataStore_ChunkSize);
+
+    std::size_t compressedSize = compression::ZlibDecompression::CompressBuffer(uncompressedChunkDataBuffer, Diesel_CompressedDataStore_ChunkSize, compressedChunkDataBuffer, Diesel_CompressedDataStore_ChunkSize * 2, ZLIB_COMPRESSION_LEVEL_DEFAULT_COMPRESSION); // Diesel uses default compression by default
+
+    if (compressedSize < Diesel_CompressedDataStore_ChunkSize) {
+      this->WriteType<uint32_t>(compressedSize);
+      this->WriteBytes(compressedChunkDataBuffer, compressedSize);
+    }
+    else {
+      this->WriteType<uint32_t>(Diesel_CompressedDataStore_ChunkSize);
+      this->WriteBytes(uncompressedChunkDataBuffer, Diesel_CompressedDataStore_ChunkSize);
+    }
+  }
+
+  memset(uncompressedChunkDataBuffer, 0, Diesel_CompressedDataStore_ChunkSize);
+  memset(compressedChunkDataBuffer, 0, Diesel_CompressedDataStore_ChunkSize * 2);
+
+  auto remainingBytesInInput = reader.GetFileSize() - (reader.GetPosition() - inputStartPosition);
+
+  reader.ReadBytesToBuffer(uncompressedChunkDataBuffer, remainingBytesInInput);
+  std::size_t compressedSize = compression::ZlibDecompression::CompressBuffer(uncompressedChunkDataBuffer, remainingBytesInInput, compressedChunkDataBuffer, Diesel_CompressedDataStore_ChunkSize * 2, ZLIB_COMPRESSION_LEVEL_DEFAULT_COMPRESSION);
+
+  if (compressedSize < Diesel_CompressedDataStore_ChunkSize) {
+    this->WriteType<uint32_t>(compressedSize);
+    this->WriteBytes(compressedChunkDataBuffer, compressedSize);
+  }
+  else {
+    this->WriteType<uint32_t>(remainingBytesInInput);
+    this->WriteBytes(uncompressedChunkDataBuffer, remainingBytesInInput);
+  }
+
+  delete[] uncompressedChunkDataBuffer;
+  delete[] compressedChunkDataBuffer;
 }

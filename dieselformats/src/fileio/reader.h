@@ -112,7 +112,7 @@ public:
   /// Read's a modern Diesel formatted zlib compressed buffer from the input file into memory. (modern diesel format is "{uncompressedSize:u64}{compressedBufferSize:u32}{compressedBuffer:char[compressedBufferSize]}"
   /// </summary>
   /// <param name="outReader"></param>
-  void ReadCompressed(Reader& outReader);
+  void ReadCompressedDataStore(Reader& outReader);
 
   /// <summary>
   /// Read's a BANDITS - Phoenix Rising .enc file to the provided buffer.

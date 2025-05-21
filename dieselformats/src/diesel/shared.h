@@ -23,6 +23,7 @@ namespace diesel {
     MODERN_VERSION_START = 10,
     PAYDAY_THE_HEIST_V1,
     PAYDAY_THE_HEIST_LATEST,
+    PAYDAY_2_LEGACY_CONSOLE, // PAYDAY 2 XBOX 360 / PlayStation 3
     PAYDAY_2_LATEST,
     //PAYDAY_2_XB1_PS4, // XB1, PS4 and Switch might all share 1 base engine version, but they are seperate for now
     //PAYDAY_2_SWITCH,
@@ -72,7 +73,7 @@ namespace diesel {
   };
   bool AreLoadParameters32Bit(const DieselFormatsLoadingParameters& version);
   bool DoLoadParametersHaveIdstrings(const DieselFormatsLoadingParameters& version);
-  bool ShouldSwapEndiannessForLoadParameters(const DieselFormatsLoadingParameters& version);
+  bool AreLoadParametersForABigEndianPlatform(const DieselFormatsLoadingParameters& version);
 
   class Vector3 {
   public:

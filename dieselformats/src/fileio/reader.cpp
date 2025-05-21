@@ -70,11 +70,17 @@ MemoryReaderContainer::MemoryReaderContainer(char* buffer, std::size_t size) {
 }
 
 MemoryReaderContainer::~MemoryReaderContainer() {
-  if (this->data)
+  if (this->data) {
     delete[] this->data;
+    this->data = nullptr;
+  }
 }
 
 void MemoryReaderContainer::Close() {
+  if (this->data) {
+    delete[] this->data;
+    this->data = nullptr;
+  }
 }
 
 unsigned long long MemoryReaderContainer::GetFileSize() {
@@ -176,21 +182,53 @@ void Reader::ReadBytesToBuffer(char* outBuffer, std::size_t size) {
   this->position += this->container->ReadBytesToBuffer(outBuffer, size, this->position);
 }
 
-void Reader::ReadCompressed(Reader& outReader) {
-  auto uncompressedSize = this->ReadType<uint64_t>(); // could be uint32_t on 32bit diesel
-  char* uncompressed = new char[uncompressedSize];
+void Reader::ReadCompressedDataStore(Reader& outReader) {
+  auto uncompressedTotalSize = ReadType<uint64_t>(); // could be uint32_t on 32bit diesel
+  char* uncompressed = new char[uncompressedTotalSize] {};
+  std::size_t uncompressedPosition = 0;
 
-  auto compressedSize = this->ReadType<uint32_t>();
+  auto inputStartPosition = GetPosition();
 
-  char* compressed = new char[compressedSize];
+  unsigned int chunks = (unsigned int)(uncompressedTotalSize / Diesel_CompressedDataStore_ChunkSize);
 
-  this->ReadBytesToBuffer(compressed, compressedSize);
+  char* compressedChunkDataBuffer = new char[Diesel_CompressedDataStore_ChunkSize] {};
 
-  compression::ZlibDecompression::DecompressBuffer(compressed, compressedSize, uncompressed, uncompressedSize);
+  for (unsigned int i = 0; i < chunks; i++) {
+    uint32_t chunkSize = ReadType<uint32_t>();
 
-  delete[] compressed;
+    if (chunkSize < Diesel_CompressedDataStore_ChunkSize) { // compressed
+      ReadBytesToBuffer(compressedChunkDataBuffer, chunkSize);
 
-  outReader = Reader(uncompressed, uncompressedSize);
+      compression::ZlibDecompression::DecompressBuffer(compressedChunkDataBuffer, chunkSize, uncompressed + uncompressedPosition, uncompressedTotalSize);
+      uncompressedPosition += Diesel_CompressedDataStore_ChunkSize;
+    }
+    else { // uncompressed
+      ReadBytesToBuffer(uncompressed + uncompressedPosition, chunkSize);
+      uncompressedPosition += chunkSize;
+    }
+  }
+
+  //memset(compressedChunkDataBuffer, 0, Diesel_CompressedDataStore_ChunkSize);
+
+  if (uncompressedPosition != uncompressedTotalSize) { // compressed chunk remaining
+    uint32_t chunkSize = ReadType<uint32_t>();
+
+    if (chunkSize < Diesel_CompressedDataStore_ChunkSize) { // compressed
+      ReadBytesToBuffer(compressedChunkDataBuffer, chunkSize);
+
+      compression::ZlibDecompression::DecompressBuffer(compressedChunkDataBuffer, chunkSize, uncompressed + uncompressedPosition, uncompressedTotalSize - uncompressedPosition);
+      uncompressedPosition += (uncompressedTotalSize - uncompressedPosition);
+    }
+    else { // uncompressed
+      ReadBytesToBuffer(uncompressed + uncompressedPosition, chunkSize);
+      uncompressedPosition += chunkSize;
+    }
+  }
+
+  delete[] compressedChunkDataBuffer;
+
+  outReader = Reader(uncompressed, uncompressedTotalSize);
+  outReader.SetSwapEndianness(this->swapEndiannessOfIntegers);
 }
 
 ///

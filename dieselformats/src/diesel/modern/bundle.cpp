@@ -44,12 +44,15 @@ namespace diesel {
         this->sourceFile = source;
 
         Reader reader;
-        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
-          inReader.ReadCompressed(reader);
+        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE)) {
+          inReader.ReadCompressedDataStore(reader);
         }
         else {
           reader = inReader;
         }
+
+        if (reader.GetFileSize() == 0)
+          return;
 
         auto start = reader.GetPosition();
         auto size = reader.ReadType<uint32_t>();
@@ -109,14 +112,14 @@ namespace diesel {
           }
 
           std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
-          Reader finalReader(dataBundlePath);
+          this->fileContents = Reader(dataBundlePath);
 
-          if (this->engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
+          /*if (this->engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
             finalReader.ReadCompressed(this->fileContents);
           }
           else {
             this->fileContents = finalReader;
-          }
+          }*/
         }
 
         outReader = this->fileContents;
@@ -152,7 +155,7 @@ namespace diesel {
             continue;
 
           Reader reader(filePath);
-          reader.SetSwapEndianness(diesel::ShouldSwapEndiannessForLoadParameters(version));
+          reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
 
           auto header_size = reader.ReadType<uint32_t>();
 
@@ -191,7 +194,7 @@ namespace diesel {
 
             Reader reader;
             Reader reader2(path);
-            reader2.ReadCompressed(reader);
+            reader2.ReadCompressedDataStore(reader);
 
             auto header_size = reader.ReadType<uint32_t>();
             diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
