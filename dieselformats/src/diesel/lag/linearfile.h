@@ -3,13 +3,15 @@
 #include "fileio/reader.h"
 #include "diesel/lag/stringtable.h"
 
+#include <memory>
+
 namespace diesel {
   namespace lag {
     typedef std::pair<std::filesystem::path, std::filesystem::path> LinearFileDirectoryBasenamePair;
 
     class LinearFileEntry {
     public:
-      bool IsDirectory() const;
+      bool IsDirectory() const { return this->def_linear_file == -1; }
     public:
       std::string directory;
       std::string basename;
@@ -21,7 +23,7 @@ namespace diesel {
     public:
       unsigned int index;
       std::string file_name;
-      std::vector<LinearFileEntry*> sorted_files;
+      std::vector<std::shared_ptr<LinearFileEntry>> sorted_files;
       std::vector<unsigned int> uncompressed_file_offset;
     };
 
@@ -33,14 +35,14 @@ namespace diesel {
       StringTable& GetStringTable();
       
       const std::vector<LinearFileEntry>& GetUniqueFiles();
-      std::vector<LinearFileHeader>& GetLinearFileHeaders();
+      std::vector<std::shared_ptr<LinearFileHeader>>& GetLinearFileHeaders();
 
       
 
     private:
       StringTable strings;
-      std::vector<LinearFileEntry> _entries;
-      std::vector<LinearFileHeader> linear_file_headers;
+      std::vector<std::shared_ptr<LinearFileEntry>> _entries;
+      std::vector<std::shared_ptr<LinearFileHeader>> linear_file_headers;
     };
 
     class LinearFileOptions {
@@ -50,19 +52,19 @@ namespace diesel {
     };
     class LinearFile {
     public:
-      LinearFile(Reader& reader, LinearFileHeader& thisHeader);
+      LinearFile(Reader& reader, std::shared_ptr<LinearFileHeader>& thisHeader);
 
     private:
       unsigned long long GetSortedFilesIndexOfFile(const std::string& directory, const std::string& basename);
     public:
       std::size_t GetSizeOfEntry(const std::string& directory, const std::string& basename);
 
-      void ReadEntryToBuffer(Reader& reader, const std::string& directory, const std::string& basename, char* outBuffer, std::size_t outBufferSize);
+      bool ReadEntryToReader(Reader& sourceLinearFileReader, Reader& outFileContentsReader, const std::string& directory, const std::string& basename);
 
     public:
       void GetFlatListOfEntries(std::vector<LinearFileDirectoryBasenamePair>& out);
     private:
-      LinearFileHeader* header;
+      std::shared_ptr<LinearFileHeader> header;
 
       std::vector<int> compressed_offsets;
       std::vector<int> compressed_sizes;

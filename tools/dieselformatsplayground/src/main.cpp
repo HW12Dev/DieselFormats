@@ -2,11 +2,13 @@
 #include "fileio/zlibcompression.h"
 #include "diesel/graw/dieselscript.h"
 #include "diesel/lag/xml.h"
+#include "diesel/lag/linearfile.h"
 #include "diesel/modern/bundle.h"
 #include "diesel/font.h"
 #include "diesel/modern/hashlist.h"
 #include "diesel/objectdatabase.h"
 #include "diesel/oil.h"
+#include "diesel/random.h"
 
 #include <iostream>
 #include <fstream>
@@ -354,6 +356,20 @@ void CopyMultiFileTransport() {
 #pragma endregion
 
 int main() {
+
+  /*std::filesystem::path base = "X:\\SteamLibrary\\steamapps\\common\\Lead and Gold Gangs of the Wild West\\bundles";
+
+  Reader lhdreader(base / "game.lhd");
+  diesel::lag::LinearHeader lhd(lhdreader);
+  lhdreader.Close();
+  
+  Reader bootreader(base / "boot.fcl");
+  diesel::lag::LinearFile boot(bootreader, lhd.GetLinearFileHeaders()[0]);
+  //bootreader.Close();
+
+  Reader version;
+  boot.ReadEntryToReader(bootreader, version, "compiled\\win32\\data\\settings\\", "version.xmb");*/
+
   return 0;
   //Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
   //diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);

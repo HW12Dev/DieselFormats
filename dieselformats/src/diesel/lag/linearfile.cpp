@@ -4,7 +4,7 @@
 
 #include <cassert>
 
-const unsigned long long BlockSize = 0x10000;
+const unsigned long long Diesel_LinearFile_BlockSize = 0x10000;
 
 namespace diesel {
   namespace lag {
@@ -27,7 +27,7 @@ namespace diesel {
         entry.size = size;
         entry.def_linear_file = def_linear_file;
 
-        this->_entries.push_back(entry);
+        this->_entries.push_back(std::make_shared<LinearFileEntry>(entry));
       }
 
       auto num_linear_files = reader.ReadType<uint32_t>();
@@ -43,14 +43,14 @@ namespace diesel {
 
         for (int j = 0; j < num_files; j++) {
           auto idx = reader.ReadType<uint32_t>();
-          header.sorted_files.push_back(&this->_entries.data()[idx]);
+          header.sorted_files.push_back(this->_entries[idx]);
         }
         for (int j = 0; j < num_files; j++) {
           auto off = reader.ReadType<uint32_t>();
           header.uncompressed_file_offset.push_back(off);
         }
 
-        this->linear_file_headers.push_back(header);
+        this->linear_file_headers.push_back(std::make_shared<LinearFileHeader>(header));
       }
 
       auto num_dirs = reader.ReadType<uint32_t>();
@@ -65,18 +65,18 @@ namespace diesel {
       return {};
     }
 
-    std::vector<LinearFileHeader>& LinearHeader::GetLinearFileHeaders() {
+    std::vector<std::shared_ptr<LinearFileHeader>>& LinearHeader::GetLinearFileHeaders() {
       return this->linear_file_headers;
     }
 
 
 
-    LinearFile::LinearFile(Reader& reader, LinearFileHeader& thisHeader) { // dsl::linearfile::LinearFile::LinearFile
+    LinearFile::LinearFile(Reader& reader, std::shared_ptr<LinearFileHeader>& thisHeader) { // dsl::linearfile::LinearFile::LinearFile
       if (reader.GetFileSize() <= 0) {
         return;
       }
 
-      this->header = &thisHeader;
+      this->header = thisHeader;
 
       auto segment_count = reader.ReadType<int32_t>();
       auto segment_size = reader.ReadType<int32_t>();
@@ -116,119 +116,63 @@ namespace diesel {
       }
     }
 
-    void LinearFile::ReadEntryToBuffer(Reader& reader, const std::string& directory, const std::string& basename, char* outBuffer, std::size_t outBufferSize) { // dsl::linearfile::LinearFile::open_immediate
-      throw std::runtime_error("This function does not run because it is terribly broken.");
-
-      auto sortedIndex = this->GetSortedFilesIndexOfFile(directory, basename);
+    bool LinearFile::ReadEntryToReader(Reader& sourceLinearFileReader, Reader& outFileContentsReader, const std::string& directory, const std::string& basename) { // dsl::linearfile::LinearFile::open_immediate
+      auto sortedIndex = GetSortedFilesIndexOfFile(directory, basename);
 
       if (sortedIndex == -1)
-        return;
+        return false;
 
-      auto fileEntry = this->header->sorted_files[sortedIndex];
+      auto& fileEntry = this->header->sorted_files[sortedIndex];
 
-      
-      int start_block_index = HIWORD(this->header->uncompressed_file_offset[sortedIndex]);
-      int end_block_index = HIWORD(fileEntry->size + this->header->uncompressed_file_offset[sortedIndex]);
+      auto uncompressed_file_offset = this->header->uncompressed_file_offset[sortedIndex];
 
-      int uncompressed_data_write_offset = 0;
-      int uncompressed_file_size = fileEntry->size;
+      auto start_offset = (uint16_t)uncompressed_file_offset;
+      auto end_offset = (uint16_t)(LOWORD(fileEntry->size) + uncompressed_file_offset);
 
-      char* uncompressed_buffer = new char[uncompressed_file_size];
+      auto start_segment = uncompressed_file_offset >> 16;
+      auto end_segment = (fileEntry->size + uncompressed_file_offset) >> 16;
 
-      reader.SetPosition(this->compressed_offsets[start_block_index]);
+      auto start_block_offset = this->compressed_offsets[start_segment];
 
-      char* current_read_block_storage = new char[BlockSize];
-      char* temp_decompressed = new char[BlockSize];
-      for (int current_block_index = start_block_index; current_block_index < end_block_index; current_block_index++) {
-        auto size_of_current_block = this->compressed_sizes[current_block_index];
+      sourceLinearFileReader.SetPosition(start_block_offset);
 
-        reader.ReadBytesToBuffer(current_read_block_storage, size_of_current_block);
+      assert(start_segment >= 0 && end_segment >= 0 && start_segment < this->compressed_offsets.size() && end_segment < this->compressed_offsets.size());
 
-        auto data_start = current_block_index != start_block_index ? 0 : LOWORD(this->header->uncompressed_file_offset[sortedIndex]);
+      char* segment_mem = new char[Diesel_LinearFile_BlockSize];
+      char* uncompressed_block = new char[Diesel_LinearFile_BlockSize];
 
-        auto decompressed_size = *(int*)&current_read_block_storage[size_of_current_block - 4];
+      char* file_contents = new char[fileEntry->size];
+      std::size_t file_contents_position = 0;
 
-        if (size_of_current_block == BlockSize) {
-          // copy buffer directly
-          memcpy(&uncompressed_buffer[uncompressed_data_write_offset], &current_read_block_storage[data_start], size_of_current_block);
-
-          uncompressed_data_write_offset += size_of_current_block;
-        }
-        else {
-          compression::ZlibDecompression::DecompressBuffer(current_read_block_storage, size_of_current_block, temp_decompressed, decompressed_size);
-
-          memcpy(&uncompressed_buffer[uncompressed_data_write_offset], &temp_decompressed[data_start], decompressed_size);
-
-          uncompressed_data_write_offset += decompressed_size;
-        }
-      }
-
-      //int decompress_offset = 0;
-      //auto uncompressed_file_offset_of_sorted_index = this->header->uncompressed_file_offset[sortedIndex];
-      //
-      //auto uncompressed_file_offset = HIWORD(uncompressed_file_offset_of_sorted_index);
-      //int start_offset = uncompressed_file_offset_of_sorted_index;
-      //int end_offset = fileEntry->size + uncompressed_file_offset_of_sorted_index;
-      //
-      //int start_segment = HIWORD(uncompressed_file_offset_of_sorted_index);
-      //int end_segment = (fileEntry->size + uncompressed_file_offset_of_sorted_index) >> 16;
-      //
-      //char* segment_mem = new char[BlockSize];
-      //char* uncompressed_block = new char[BlockSize];
-      //
-      //auto uncompressedaBufferSize = fileEntry->size;
-      //if (!uncompressedaBufferSize)
-      //  uncompressedaBufferSize = 1;
-      //char* uncompresseda = new char[uncompressedaBufferSize];
-      //
-      //auto start = this->compressed_offsets[uncompressed_file_offset];
-      //
-      //reader.SetPosition(start);
-      //
-      //auto v26 = (unsigned __int16)uncompressed_file_offset_of_sorted_index;
-      //
-      //int v44 = uncompressed_file_offset;
-      /*for (int v44 = uncompressed_file_offset; v44 <= end_segment; v44++) {
-        reader.ReadBytesToBuffer(segment_mem, this->compressed_offsets[v44]);
+      int current_segment = start_segment;
+      while(current_segment <= end_segment) {
+        sourceLinearFileReader.ReadBytesToBuffer(segment_mem, this->compressed_sizes[current_segment]);
 
         auto end_pos = end_offset;
-        auto start = v44 != uncompressed_file_offset ? 0 : v26;
 
-        if (v44 != end_segment)
-          end_pos = BlockSize;
+        auto v582 = (current_segment != start_segment) ? 0 : uncompressed_file_offset;
 
-        auto v58 = end_pos - start;
+        if (current_segment != end_segment)
+          end_pos = Diesel_LinearFile_BlockSize;
+        auto v58 = end_pos - v582;
 
-        if (this->compressed_sizes[v44] == BlockSize) {
-          memcpy(&uncompresseda[decompress_offset], &segment_mem[start], v58);
+        if (this->compressed_sizes[current_segment] == Diesel_LinearFile_BlockSize) {
+          memcpy(&file_contents[file_contents_position], segment_mem, v58);
         }
         else {
-          auto decompresed_size = *(int*)&segment_mem[this->compressed_sizes[v44] - 4];
-
-          compression::ZlibDecompressionContext decompress = compression::ZlibDecompressionContext();
-
-          decompress.DecompressBuffer(segment_mem, this->compressed_sizes[v44], uncompressed_block, decompresed_size);
-
-          memcpy(&uncompresseda[decompress_offset], &uncompressed_block[start], v58);
+          compression::ZlibDecompression::DecompressBuffer(segment_mem, *(int*)&segment_mem[this->compressed_sizes[current_segment] - 4], uncompressed_block, this->compressed_sizes[current_segment]);
+          memcpy(&file_contents[file_contents_position], &uncompressed_block[v582], v58);
         }
-        decompress_offset += v58;
-        v26 = start_offset;
-        uncompressed_file_offset = start_segment;
-      }*/
 
-      //if (segment_mem)
-      //  delete[] segment_mem;
-      //if (uncompressed_block)
-      //  delete[] uncompressed_block;
-      //
-      //if (uncompresseda) {
-      //  memcpy(outBuffer, uncompresseda, outBufferSize);
-      //  delete[] uncompresseda;
-      //}
+        file_contents_position += v58;
+        current_segment++;
+      }
+
+      delete[] segment_mem;
+      delete[] uncompressed_block;
+
+      outFileContentsReader = Reader(file_contents, fileEntry->size);
     }
 
-    bool LinearFileEntry::IsDirectory() const {
-      return this->def_linear_file == -1;
-    }
 }
 }
