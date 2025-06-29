@@ -2,9 +2,37 @@
 
 #include "test_shared.h"
 
-// Runs the Diesel LCG twice with the same seed.
+// Runs the Diesel LCG three times with the same seed.
 TEST_ENTRY(lcg) {
   diesel::DieselLCG lcg = diesel::DieselLCG();
+
+  lcg.set_seed(0);
+  { // Tests from the source of the LCG constants
+    TEST_EQUAL(lcg.get_state(), 0x00000000);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x3C6EF35F);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x47502932);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0xD1CCF6E9);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0xAAF95334);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x6252E503);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x9F2EC686);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x57FE6C2D);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0xA3D95FA8);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x81FDBEE7);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0x94F0AF1A);
+    lcg.random();
+    TEST_EQUAL(lcg.get_state(), 0xCBF633B1);
+  }
+
 
   lcg.set_seed(0);
   {

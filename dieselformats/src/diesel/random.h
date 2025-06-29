@@ -14,6 +14,7 @@ namespace diesel {
   public:
     
     void set_seed(uint32_t seed) { _state = seed; }
+    uint32_t get_state() const { return _state; }
 
     // Returns a random number between 0 and 1
     double random();

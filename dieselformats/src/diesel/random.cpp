@@ -3,6 +3,7 @@
 #include <cmath>
 
 namespace diesel {
+  // Diesel uses the constants from ranqd1 (Numerical Recipes in C, Chapter 7.1, Eq. 7.1.6)
   const double DIESEL_LCG_MODULUS = 2.328306436538696e-10;
   const int DIESEL_LCG_MULTIPLIER = 1664525;
   const int DIESEL_LCG_INCREMENT = 1013904223;
