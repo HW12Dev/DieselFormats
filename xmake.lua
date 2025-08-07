@@ -1,13 +1,14 @@
 add_rules("mode.release", "mode.debug")
 
 
-add_requires("qt6widgets")
+add_requires("qt6widgets 6.8.0", "qt6network 6.8.0")
 
 includes("dieselformats")
 
 includes("tools/lookuptool")
 includes("tools/xmbparser")
 includes("tools/banditsdecryptor")
+includes("tools/packagesdumper")
 
 target("DieselFormatsPlayground")
   set_languages("cxxlatest")

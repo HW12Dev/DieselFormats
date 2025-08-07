@@ -32,7 +32,50 @@ namespace diesel {
     this->_s = reader.ReadType<uint32_t>();
   }
 
+  std::string SanitiseStringForXml(const std::string& str) {
+    std::string sanitised;
+
+    for (auto character : str) {
+      if (character == '\"') {
+        sanitised += "&quot;";
+      }
+      else if (character == '\'') {
+        sanitised += "&apos;";
+      }
+      else if (character == '<') {
+        sanitised += "&lt;";
+      }
+      else if (character == '>') {
+        sanitised += "&gt;";
+      }
+      else if (character == '&') {
+        sanitised += "&amp;";
+      }
+      else {
+        sanitised += character;
+      }
+    }
+
+    return sanitised;
+  }
+
+  bool VerifyBlobType(Reader& reader, uint32_t blobId)
+  {
+    if (reader.GetFileSize() < 4)
+      return false;
+
+    auto startPosition = reader.GetPosition();
+    reader.AddPosition(reader.GetFileSize() - 4);
+
+    auto blobType = reader.ReadType<uint32_t>();
+
+    reader.SetPosition(startPosition);
+    
+    return blobType == blobId;
+  }
+
 }
 
 static_assert(sizeof(diesel::Vector3) == 0xC);
+static_assert(sizeof(diesel::Quaternion) == 0x10);
 static_assert(sizeof(diesel::Matrix4) == 0x40);

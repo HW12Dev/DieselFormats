@@ -7,6 +7,7 @@
 Writer::Writer(const std::filesystem::path& path) {
 
   this->position = 0;
+  this->swapEndiannessOfIntegers = false;
 
   this->file = INVALID_HANDLE_VALUE;
 
@@ -14,8 +15,10 @@ Writer::Writer(const std::filesystem::path& path) {
 }
 
 void Writer::Close() {
-  if (this->file != INVALID_HANDLE_VALUE)
+  if (this->file != INVALID_HANDLE_VALUE) {
     CloseHandle(file);
+    this->file = INVALID_HANDLE_VALUE;
+  }
 }
 
 unsigned long long Writer::GetPosition() const {

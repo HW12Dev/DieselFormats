@@ -12,7 +12,7 @@ namespace diesel {
 
     class Hashlist {
     public:
-      Hashlist() = default;
+      Hashlist() { this->AddSourceToHashlist(""); }
 
     public:
       /// <summary>
@@ -23,6 +23,8 @@ namespace diesel {
       /// <param name="out"></param>
       /// <returns></returns>
       bool FindSourceForIdstring(const Idstring& id, std::string& out);
+
+      std::string GetIdstringSource(const Idstring& id, bool* success = nullptr);
 
       void AddSourceToHashlist(const std::string& str);
       void AddSourceToHashlist(const char* str);

@@ -9,14 +9,19 @@
 static_assert(sizeof(diesel::Glyph) == 10);
 
 namespace diesel {
-  AngelCodeFont::AngelCodeFont(Reader& reader, const DieselFormatsLoadingParameters& version) {
-    //if (diesel::modern::ToModernVersion(version.version) == diesel::modern::ModernEngineVersion::INVALID_NOT_MODERN) {
+  bool AngelCodeFont::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
+    if (!VerifyBlobType(reader, 0x3730537A))
+      return false;
+
     if (version.version < diesel::EngineVersion::MODERN_VERSION_START) {
       this->load_from_legacy(reader, version);
+      return true;
     }
     else {
       this->load_from_modern(reader, version);
+      return true;
     }
+    return false;
   }
 
   void AngelCodeFont::load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version) { // AngelCodeFont::compile from Lead and Gold
@@ -127,7 +132,7 @@ namespace diesel {
     for (int i = 0; i < kerning._data._size; i++) {
       static_assert(sizeof(std::pair<int, int>) == 8);// if this static assert fails, which to reading both values of the pair separately
       auto key = reader.ReadType<std::pair<int, int>>();
-      auto kerning = reader.ReadType<uint32_t>();
+      auto kerning = reader.ReadType<int32_t>();
 
       this->_kerning.insert({ key, kerning });
     }
@@ -135,6 +140,37 @@ namespace diesel {
     reader.SetPosition(startPosition + face._s);
 
     this->_face = reader.ReadString(); // read is slow if not reading from memory
+  }
+
+  std::string AngelCodeFont::DumpFontToXml(const AngelCodeFont& font) { // AngelCodeFont::compile
+    std::string xml;
+
+    xml += "<font>\n";
+
+    xml += std::format("\t<info face=\"{}\" size=\"{}\" />\n", font._face, font._size);
+    //xml += "  <info face=\"" + font._face + "\" size=\"" + std::to_string(font._size) + "\"/>\n";
+    xml += std::format("\t<common lineHeight=\"{}\" base=\"{}\" scaleW=\"{}\" scaleH=\"{}\" />\n", font._line_height, font._base_line, font._texture_width, font._texture_height);
+    //xml += "  <common lineHeight=\"" + std::to_string(font._line_height) + "\" base=\"" + std::to_string(font._base_line) + "\" scaleW=\"" + std::to_string(font._texture_width) + "\" scaleH=\"" + std::to_string(font._texture_height) + "\"/>\n";
+    xml += "\t<kernings>\n";
+
+    for (auto& kerning : font._kerning) {
+      xml += std::format("\t\t<kerning first=\"{}\" seconds=\"{}\" ammount=\"{}\" />\n", kerning.first.first, kerning.first.second, kerning.second);
+      //xml += "    <kerning first=\"" + std::to_string(kerning.first.first) + "\" second=\"" + std::to_string(kerning.first.second) + "\" ammount=\"" + std::to_string(kerning.second) + "\"/>\n";
+    }
+    xml += "\t</kernings>\n";
+    xml += "\t<chars>\n";
+
+    for (auto& character : font._character_to_glyph_map) {
+      auto& glyph = font._glyphs[character.second];
+      xml += std::format("\t\t<char id=\"{}\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" xadvance=\"{}\" xoffset=\"{}\" yoffset=\"{}\"/>\n", character.first, glyph.x, glyph.y, glyph.w, glyph.h, glyph.xadvance, glyph.xoffset, glyph.yoffset);
+      //xml += "    <char id=\"" + std::to_string(character.first) + "\" x=\"" + std::to_string(glyph.x) + "\" y=\"" + "\" width=\"" + "\" height=\"" + "\" xadvance=\"" + "\" xoffset=\"" + "\" yoffset=\"" + "\"/>\n";
+    }
+
+    xml += "\t</chars>\n";
+
+    xml += "</font>\n";
+
+    return xml;
   }
 
   

@@ -75,7 +75,8 @@ void BundleDBLoadingPanel::LoadButtonPressed() {
     diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters();
     loadParams.version = version;
     loadParams.sourcePlatform = (version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST ? diesel::FileSourcePlatform::WINDOWS_64 : (version == diesel::EngineVersion::PAYDAY_2_LINUX_LATEST) ? diesel::FileSourcePlatform::LINUX_64 : diesel::FileSourcePlatform::WINDOWS_32);
-    this->loadedBundleDatabase = new diesel::modern::BundleDatabase(bdbReader, version);
+    this->loadedBundleDatabase = new diesel::modern::BundleDatabase();
+    this->loadedBundleDatabase->Read(bdbReader, version);
 
     bdbReader.Close();
 

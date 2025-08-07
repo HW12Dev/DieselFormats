@@ -52,6 +52,7 @@ namespace diesel {
         virtual bool open(Reader& outReader, unsigned int dbKey);
 
         const std::vector<diesel::modern::ResourceID>& GetResources();
+        size_t GetFileSize(unsigned int dbKey);
       private:
         Reader fileContents;
         std::filesystem::path sourceFile;
@@ -99,9 +100,9 @@ namespace diesel {
 
     class BundleDatabase { // proper name for the "bundle_db.blb" format is "Diesel Bundle Database" (thanks RAID Modding Tools)
     public:
-      BundleDatabase(Reader& reader, const DieselFormatsLoadingParameters& version);
+      BundleDatabase();
 
-
+      bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
       void Write(Writer& writer, const DieselFormatsLoadingParameters& version);
     public:
       void GetFileList(std::vector<ResourceID>& out);
@@ -115,6 +116,9 @@ namespace diesel {
 
       // For advanced users only, do not call this if you do not know what it does
       void AddFile(DBExtKey extKey, unsigned int dbKey);
+
+      unsigned int GetNextKey() { if (_next_key == -1) { _next_key = 0; for (auto& entry : GetLookup()) { if (_next_key < entry.second) _next_key = entry.second; } _next_key++; } return _next_key; }
+      void SetNextKey(unsigned int next_key) { _next_key = next_key; }
 
     private:
       std::vector<std::pair<Idstring, unsigned int>> _properties;

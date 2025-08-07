@@ -60,7 +60,7 @@ namespace diesel {
         diesel::modern::Vector<diesel::modern::Pair<unsigned int, unsigned int>> _header(reader, version);
 
         if (_header._data != 0) {
-          reader.SetPosition(start + 4 + _header._data);
+          reader.SetPosition(start + 4 + _header._data); // start + size field size + _header._data
 
           for (int i = 0; i < _header._size; i++) {
             auto db_key = reader.ReadType<uint32_t>();
@@ -79,7 +79,8 @@ namespace diesel {
         diesel::modern::Vector<ResourceID> _resources(reader, version);
 
         if (_resources._data != 0) {
-          reader.SetPosition(start + 4 + _resources._data);
+          reader.SetPosition(start + 4 + _resources._data); // start + size field size + _resources._data
+
 
           for (int i = 0; i < _resources._size; i++) {
             diesel::modern::ResourceID resource{};
@@ -138,6 +139,42 @@ namespace diesel {
         outReader.SetReplacementSize(endPos - startPos);
 
         return true;
+      }
+      size_t PackageBundle::GetFileSize(unsigned int dbKey) {
+        int headerIndex = -1;
+        for (int i = 0; i < this->header.size(); i++) {
+          if (this->header[i].first == dbKey) {
+            headerIndex = i;
+            break;
+          }
+        }
+        if (headerIndex == -1)
+          return -1;
+
+        size_t startPos = this->header[headerIndex].second;
+        size_t endPos = -1;
+
+        if (headerIndex == this->header.size() - 1) {
+          if (!this->fileContents.Valid()) {
+            std::wstring dataFileName = this->sourceFile.filename().generic_wstring();
+            auto findResult = dataFileName.find(L"_h");
+            if (findResult != std::wstring::npos) {
+              dataFileName = dataFileName.replace(findResult, findResult + sizeof(L"_h"), L"") + this->sourceFile.extension().generic_wstring();
+            }
+            std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
+
+            Reader dataFileReader(dataBundlePath);
+            this->fileContents = dataFileReader;
+          }
+
+          endPos = this->fileContents.GetFileSize();
+          
+        }
+        else {
+          endPos = this->header[headerIndex + 1].second;
+        }
+
+        return endPos - startPos;
       }
     }
 
@@ -305,7 +342,11 @@ namespace diesel {
     }
 
 #pragma region bundle_db.blb
-    BundleDatabase::BundleDatabase(Reader& reader, const DieselFormatsLoadingParameters& version) {
+    BundleDatabase::BundleDatabase() {
+      this->_next_key = -1;
+    }
+
+    bool BundleDatabase::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
       auto _properties = SortMap<Idstring, unsigned int>(reader, version);
       auto _lookup = SortMap<DBExtKey, unsigned int>(reader, version);
 
@@ -345,8 +386,9 @@ namespace diesel {
         this->_lookup.push_back(std::make_pair(key, value));
       }
 
-      this->_next_key = reader.ReadType<uint32_t>();
+      reader.ReadType<uint32_t>(); // blob version
 
+      return true;
     }
 
     void BundleDatabase::Write(Writer& writer, const DieselFormatsLoadingParameters& version) {
@@ -380,7 +422,7 @@ namespace diesel {
         writer.AddPosition(4);
       }
 
-      writer.WriteType<uint32_t>(this->_next_key);
+      writer.WriteType<uint32_t>(0xA0BEA7D9); // blob version
 
       writer.SetPosition(propertiesDataOffset);
       if (AreLoadParameters32Bit(version)) {
@@ -396,9 +438,6 @@ namespace diesel {
       else {
         writer.WriteType<uint64_t>(lookupData);
       }
-
-
-      writer.Close();
     }
 
     void BundleDatabase::GetFileList(std::vector<ResourceID>& out) {

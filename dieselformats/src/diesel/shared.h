@@ -23,6 +23,7 @@ namespace diesel {
     MODERN_VERSION_START = 10,
     PAYDAY_THE_HEIST_V1,
     PAYDAY_THE_HEIST_LATEST,
+    PAYDAY_2_LEGACY, // Legacy PAYDAY 2 bundle format (no allocators)
     PAYDAY_2_LEGACY_CONSOLE, // PAYDAY 2 XBOX 360 / PlayStation 3
     PAYDAY_2_LATEST,
     //PAYDAY_2_XB1_PS4, // XB1, PS4 and Switch might all share 1 base engine version, but they are seperate for now
@@ -75,6 +76,13 @@ namespace diesel {
   bool DoLoadParametersHaveIdstrings(const DieselFormatsLoadingParameters& version);
   bool AreLoadParametersForABigEndianPlatform(const DieselFormatsLoadingParameters& version);
 
+  class Quaternion {
+  public:
+    float x;
+    float y;
+    float z;
+    float w;
+  };
   class Vector3 {
   public:
     float x;
@@ -151,6 +159,10 @@ namespace diesel {
     this->_keys = InplaceArray<Key>(reader, version);
     this->_values = InplaceArray<Value>(reader, version);
   }
+
+  std::string SanitiseStringForXml(const std::string& str);
+
+  bool VerifyBlobType(Reader& reader, uint32_t blobId);
 
   bool operator==(EngineVersion a, EngineVersion b);
   bool operator!=(EngineVersion a, EngineVersion b);

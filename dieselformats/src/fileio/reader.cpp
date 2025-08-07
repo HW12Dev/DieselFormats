@@ -14,6 +14,10 @@ FileReaderContainer::FileReaderContainer(const std::filesystem::path& path) {
   this->size = -1;
 
   this->file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+  if (this->file == INVALID_HANDLE_VALUE) {
+    throw std::runtime_error("File: " + path.string() + " does not exist.");
+  }
 }
 
 FileReaderContainer::~FileReaderContainer() {

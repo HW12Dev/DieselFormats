@@ -6,6 +6,7 @@ namespace diesel {
     Hashlist* GetGlobalHashlist() {
       return &GlobalHashlist;
     }
+
     bool Hashlist::FindSourceForIdstring(const Idstring& id, std::string& out) {
       auto find = this->hashes.find(id);
 
@@ -16,6 +17,16 @@ namespace diesel {
       out.assign(id.hex());
       return false;
     }
+
+    std::string Hashlist::GetIdstringSource(const Idstring& id, bool* success)
+    {
+      std::string str;
+      bool success_ = FindSourceForIdstring(id, str);
+      if (success)
+        *success = success_;
+      return str;
+    }
+
     void Hashlist::AddSourceToHashlist(const std::string& str) {
       this->AddSourceToHashlist(str.c_str());
     }

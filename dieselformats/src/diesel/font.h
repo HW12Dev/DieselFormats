@@ -19,9 +19,9 @@ namespace diesel {
     uint8_t texture_index;
     uint8_t w;
     uint8_t h;
-    uint8_t xadvance;
-    uint8_t xoffset;
-    uint8_t yoffset;
+    int8_t xadvance;
+    int8_t xoffset;
+    int8_t yoffset;
     uint16_t x;
     uint16_t y;
   };
@@ -30,13 +30,15 @@ namespace diesel {
   class AngelCodeFont { // technically AngelCodeFont::Data, as no texture data is processed here
   public:
     // Reader must belong to a .font or .blb font file. The provided engine version will be used to determine which version to load.
-    AngelCodeFont(Reader& reader, const DieselFormatsLoadingParameters& version);
+    bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
   private:
     // Loads .blb font files
     void load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version);
     // Loads .font files
     void load_from_modern(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+  public:
+    static std::string DumpFontToXml(const AngelCodeFont& font);
   private:
     std::vector<Glyph> _glyphs;
     std::map<int, int> _character_to_glyph_map;

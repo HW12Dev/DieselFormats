@@ -1,3 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="diesel::modern::EngineData::EngineValue">
+    <Intrinsic Name="valuetype" Expression="(diesel::modern::EngineData::EngineValueType)((_id &amp; ~0xFFFFFF) >> 24)"/>
+    <Intrinsic Name="valueindex" Expression="_id &amp; 0xFFFFFF"/>
+  
+    <DisplayString>{{ type = {valuetype()} index = {valueindex()} }}</DisplayString>
+    <Expand>
+      <Item Name="[type]">valuetype()</Item>
+      <Item Name="[index]">valueindex()</Item>
+    </Expand>
+  </Type>
 </AutoVisualizer>

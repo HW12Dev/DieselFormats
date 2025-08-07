@@ -11,11 +11,19 @@ namespace diesel {
   namespace modern {
 
     std::string hex(const char* bytes, int n);
-    
+
+    class BlobSaverChunk {
+    public:
+      BlobSaverChunk(Reader& reader, const DieselFormatsLoadingParameters& version);
+    public:
+      unsigned long long _size;
+      unsigned long long _data;
+    };
     class String {
     public:
       String(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+      static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t& outPositionOfStringPointerInBuffer);
     public:
       unsigned long long _s;
     };
@@ -64,6 +72,13 @@ namespace diesel {
         this->_data = reader.ReadType<uint64_t>();
         reader.AddPosition(8); // _allocator
       }
+      else if (version.version == EngineVersion::PAYDAY_2_LEGACY) {
+        // this version doesn't have an _allocator field serialised
+
+        this->_size = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_data = (unsigned long long)reader.ReadType<uint32_t>();
+      }
       else if (AreLoadParameters32Bit(version)) { // 32 bit engine version (PAYDAY: The Heist, PAYDAY 2)
         this->_size = (unsigned long long)reader.ReadType<uint32_t>();
         this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
@@ -71,12 +86,13 @@ namespace diesel {
         reader.AddPosition(4); // _allocator
       }
       else {
-        assert("Engine version is not 32bit, but isn't RAID or PD2 Linux");
+        throw std::runtime_error("Engine version is not 32bit, but isn't RAID or PD2 Linux");
       }
     }
 
     template<typename T>
     void Vector<T>::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t capacity, uint64_t& outPositionOfDataPointerInBuffer) {
+      // TODO: strange PAYDAY_2_LEGACY data
       if (AreLoadParameters32Bit(version)) {
         writer.WriteType<uint32_t>(size);
         writer.WriteType<uint32_t>(capacity);
@@ -108,6 +124,9 @@ namespace diesel {
       }
       this->_data = Vector<Pair<Key, Value>>(reader, version);
 
+      if(version.version == diesel::EngineVersion::PAYDAY_2_LEGACY)
+        reader.AddPosition(4);
+
       this->_is_sorted = (bool)reader.ReadType<uint8_t>();
 
       if (AreLoadParameters32Bit(version)) { // class alignment shenanigans
@@ -128,6 +147,8 @@ namespace diesel {
       }
 
       Vector<Pair<Key, Value>>::Write(writer, version, size, capacity, outPositionOfDataPointerInBuffer);
+
+      // TODO: strange PAYDAY_2_LEGACY data
 
       writer.WriteType<uint8_t>(is_sorted);
 
