@@ -16,6 +16,7 @@
 #include "diesel/modern/enginedata.h"
 #include "diesel/modern/scriptdata.h"
 #include "diesel/modern/strings.h"
+#include "diesel/modern/banksinfo.h"
 
 #include <iostream>
 #include <fstream>
@@ -141,7 +142,7 @@ void RemakePackageXml(const std::vector<diesel::modern::ResourceID>& package, st
 void DumpPackage(const std::filesystem::path& path) {
   Reader reader1(path);
 
-  diesel::modern::blobtypes::PackageBundle package(path, reader1, diesel::EngineVersion::PAYDAY_2_LATEST);
+  diesel::modern::PackageBundle package(path, reader1, diesel::EngineVersion::PAYDAY_2_LATEST);
 
   std::string pkgName = "";
 
@@ -158,7 +159,7 @@ void DumpPackage(const std::filesystem::path& path) {
 #pragma endregion
 
 
-namespace std {
+/*namespace std {
   template<>
   struct hash<Idstring> {
     std::size_t operator()(Idstring const& p) const
@@ -176,13 +177,226 @@ namespace std {
       return p.first ^ p.second;
     }
   };
+}*/
+
+using namespace diesel::modern;
+
+void pd2_ps3_extract_test() {
+  //std::filesystem::path inputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2";
+  //std::filesystem::path outputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2 Unpack";
+  std::filesystem::path inputDirectory = "./";
+  std::filesystem::path outputDirectory = "./unpacked";
+
+  if (std::filesystem::exists("./hashlist")) {
+    Reader hashlistr("./hashlist");
+    diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlistr);
+    hashlistr.Close();
+  }
+  if (std::filesystem::exists("./hashlist.txt")) {
+    Reader hashlistr("./hashlist.txt");
+    diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlistr);
+    hashlistr.Close();
+  }
+
+  diesel::DieselFormatsLoadingParameters loadingParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE, diesel::Renderer::UNSPECIFIED, diesel::FileSourcePlatform::SONY_PLAYSTATION_3);
+
+  Reader bdbReader(inputDirectory / "all.blb");
+  bdbReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadingParams));
+  BundleDatabase bdb;
+  bdb.Read(bdbReader, loadingParams);
+
+  Bundle bndl(inputDirectory, "all", loadingParams);
+
+  std::vector<PackageBundle*> packages;
+
+  for (std::filesystem::recursive_directory_iterator i(inputDirectory), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("_h.bundle") == std::string::npos)
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+
+
+      Reader reader1(i->path());
+      reader1.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadingParams));
+      PackageBundle* package = new PackageBundle(i->path(), reader1, loadingParams);
+
+      packages.push_back(package);
+    }
+  }
+
+  Hashlist* hashlist = diesel::modern::GetGlobalHashlist();
+
+  int idstring_lookup_db_key = bdb.GetDBKeyFromTypeAndName(Idstring("idstring_lookup"), Idstring("idstring_lookup"));
+
+  if (idstring_lookup_db_key != -1) {
+    Reader idstringLookup;
+    bool opened = bndl.open(idstringLookup, idstring_lookup_db_key);
+    if (opened) {
+      hashlist->ReadFileToHashlist(idstringLookup);
+    }
+  }
+
+  for (auto& entry : bdb.GetLookup()) {
+    bool foundEntry = false;
+    Reader entryContents;
+
+    foundEntry = bndl.open(entryContents, entry.second);
+    if (!foundEntry) {
+      for (auto package : packages) {
+        foundEntry = package->open(entryContents, entry.second);
+
+        if (foundEntry)
+          break;
+      }
+    }
+    if (!foundEntry) {
+      continue; // Packages and streamed bundles do not contain this file, skip it.
+    }
+
+    std::filesystem::path entryOutPath = outputDirectory / (hashlist->GetIdstringSource(entry.first._name) + "." + hashlist->GetIdstringSource(entry.first._type));
+
+    if(!std::filesystem::exists(entryOutPath.parent_path()))
+      std::filesystem::create_directories(entryOutPath.parent_path());
+
+    Writer outWriter(entryOutPath);
+    outWriter.WriteReader(entryContents);
+    outWriter.Close();
+
+  }
+
+  for (auto package : packages) {
+    delete package;
+  }
 }
 
+void undatacompile(const std::filesystem::path& inPackedAssets, const std::filesystem::path& inoutUnpackedAssets, diesel::EngineVersion version) {
+
+  Hashlist* hashlist = GetGlobalHashlist();
+
+  for (std::filesystem::recursive_directory_iterator i(inPackedAssets), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("_h.bundle") != std::string::npos)
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+
+      auto package = Idstring(_byteswap_uint64(std::stoull(i->path().filename().replace_extension(), nullptr, 16)));
+
+      if (package == Idstring("engine-package") || package == Idstring("lua-package"))
+        continue;
+
+      auto packageHeader = inPackedAssets / (package.hex() + "_h.bundle");
+      Reader packageBundleR(packageHeader);
+      PackageBundle packageBundle(packageHeader, packageBundleR, version);
+      packageBundleR.Close();
+
+      std::ofstream outPackageXml(inoutUnpackedAssets / (hashlist->GetIdstringSource(package) + ".package"));
+
+      outPackageXml << "<package>\n";
+      outPackageXml << "\t<resources>\n";
+
+      for (auto& resource : packageBundle.GetResources()) {
+        outPackageXml << std::format("\t\t<{} name=\"{}\" />\n", hashlist->GetIdstringSource(resource.type), hashlist->GetIdstringSource(resource.name));
+      }
+
+      outPackageXml << "\t</resources>\n";
+      outPackageXml << "</package>";
+    }
+  }
+
+  std::set<std::string> scriptDataExtensions = {
+    ".continents",
+    ".cover_data",
+    ".mission",
+    ".nav_data",
+    ".world_cameras",
+    ".world_sounds",
+    ".world",
+    ".continent",
+
+    ".achievment",
+    ".action_message",
+    ".comment",
+    ".credits",
+    ".hint",
+    ".objective",
+    ".dialog",
+    ".dialog_index",
+    ".menu",
+
+    ".prefhud",
+    ".sequence_manager"
+  };
+
+  for (std::filesystem::recursive_directory_iterator i(inoutUnpackedAssets), end; i != end; ++i) {
+    if (std::filesystem::is_directory(i->path()))
+      continue;
+
+    auto path = i->path();
+    auto extension = path.extension();
+
+    if (scriptDataExtensions.contains(extension.string())) {
+      Reader fileReader(path);
+      ScriptData engineData;
+      bool success = engineData.Read(fileReader, version);
+      fileReader.Close();
+
+      if (success) {
+        std::ofstream outEngineData(path);
+        outEngineData << ScriptData::DumpScriptDataToGenericXml(engineData);
+        outEngineData.close();
+      }
+    }
+    else if (extension == ".render_config") {
+      Reader fileReader(path);
+      EngineData engineData;
+      bool success = engineData.Read(fileReader, version);
+      fileReader.Close();
+
+      if (success) {
+        std::ofstream outEngineData(path);
+        outEngineData << EngineData::DumpReferenceToXml(engineData.GetRoot());
+        outEngineData.close();
+      }
+    }
+    else if (extension == ".font") {
+      Reader fileReader(path);
+      diesel::AngelCodeFont engineData;
+      bool success = engineData.Read(fileReader, version);
+      fileReader.Close();
+
+      if (success) {
+        std::ofstream outEngineData(path);
+        outEngineData << diesel::AngelCodeFont::DumpFontToXml(engineData);
+        outEngineData.close();
+      }
+    }
+    else if (extension == ".strings") {
+      Reader fileReader(path);
+      Strings engineData;
+      bool success = engineData.Read(fileReader, version);
+      fileReader.Close();
+
+      if (success) {
+        std::ofstream outEngineData(path);
+        outEngineData << Strings::DumpStringsToXml(engineData);
+        outEngineData.close();
+      }
+    }
+  }
+}
 
 int main() {
   //Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
   //diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
   //hashlist.Close();
+
+  return 0;
 
   auto testsd = [](std::string path, diesel::EngineVersion ver) {
     Reader r(path);

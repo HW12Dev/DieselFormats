@@ -42,25 +42,24 @@ namespace diesel {
       std::filesystem::path basePath;
     };
 
-    namespace blobtypes {
-      class Bundle {};
-      class PackageBundle : public Transport {
-      public:
-        PackageBundle(const std::filesystem::path& source, Reader& reader, const DieselFormatsLoadingParameters& version);
+    class PackageBundle : public Transport {
+    public:
+      PackageBundle(const std::filesystem::path& source, Reader& reader, const DieselFormatsLoadingParameters& version);
 
-      public:
-        virtual bool open(Reader& outReader, unsigned int dbKey);
+    public:
+      virtual bool open(Reader& outReader, unsigned int dbKey);
 
-        const std::vector<diesel::modern::ResourceID>& GetResources();
-        size_t GetFileSize(unsigned int dbKey);
-      private:
-        Reader fileContents;
-        std::filesystem::path sourceFile;
+      const std::vector<diesel::modern::ResourceID>& GetResources();
+      size_t GetFileSize(unsigned int dbKey);
+    private:
+      void OpenDataFile();
+    private:
+      Reader fileContents;
+      std::filesystem::path sourceFile;
 
-        std::vector<std::pair<unsigned int, unsigned int>> header;
-        std::vector<diesel::modern::ResourceID> resources;
-      };
-    }
+      std::vector<std::pair<unsigned int, unsigned int>> header;
+      std::vector<diesel::modern::ResourceID> resources;
+    };
 
 
     class MultiFileTransport : public Transport { // used in production for asset packaging but is still available to use in release builds of diesel games.

@@ -101,7 +101,7 @@ std::string ScriptData::GetGenericXmlValue(ScriptData& data, EngineData::EngineV
   case EngineValueType::Number:
     return std::format("type=\"number\" value=\"{}\"", data._numbers[value.get_index()]);
   case EngineValueType::String:
-    return std::format("type=\"string\" value=\"{}\"", data._strings[value.get_index()]);
+    return std::format("type=\"string\" value=\"{}\"", diesel::SanitiseStringForXml(data._strings[value.get_index()]));
   case EngineValueType::Vector3:
   {
     const Vector3& vec = data._vector3s[value.get_index()];

@@ -232,7 +232,6 @@ void Reader::ReadCompressedDataStore(Reader& outReader) {
   delete[] compressedChunkDataBuffer;
 
   outReader = Reader(uncompressed, uncompressedTotalSize);
-  outReader.SetSwapEndianness(this->swapEndiannessOfIntegers);
 }
 
 ///

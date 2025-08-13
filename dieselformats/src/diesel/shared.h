@@ -71,6 +71,7 @@ namespace diesel {
 
     DieselFormatsLoadingParameters() : version((diesel::EngineVersion)-1), renderer(Renderer::UNSPECIFIED), sourcePlatform(FileSourcePlatform::UNSPECIFIED) {}
     DieselFormatsLoadingParameters(diesel::EngineVersion version) : version(version), renderer(Renderer::UNSPECIFIED), sourcePlatform(FileSourcePlatform::UNSPECIFIED) {}
+    DieselFormatsLoadingParameters(diesel::EngineVersion version, diesel::Renderer renderer, diesel::FileSourcePlatform sourcePlatform) : version(version), renderer(renderer), sourcePlatform(sourcePlatform) {}
   };
   bool AreLoadParameters32Bit(const DieselFormatsLoadingParameters& version);
   bool DoLoadParametersHaveIdstrings(const DieselFormatsLoadingParameters& version);

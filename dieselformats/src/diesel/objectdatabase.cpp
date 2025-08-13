@@ -14,7 +14,7 @@
 
 namespace diesel {
   namespace objectdatabase {
-    ObjectDatabase::ObjectDatabase(Reader& reader2, diesel::EngineVersion version, diesel::FileSourcePlatform sourcePlatform, diesel::Renderer renderer) {
+    ObjectDatabase::ObjectDatabase(Reader& reader2, const diesel::DieselFormatsLoadingParameters& loadParameters) {
       auto readBufSize = reader2.GetFileSize();
       char* readBuf = new char[readBufSize];
       reader2.ReadBytesToBuffer(readBuf, readBufSize);
@@ -29,11 +29,6 @@ namespace diesel {
         count = reader.ReadType<int32_t>();
       }
 
-      DieselFormatsLoadingParameters loadParameters = DieselFormatsLoadingParameters();
-      loadParameters.version = version;
-      loadParameters.renderer = renderer;
-      loadParameters.sourcePlatform = sourcePlatform;
-
       for (int i = 0; i < count; i++) {
         auto type_id = reader.ReadType<TypeId>();
         auto ref_id = reader.ReadType<RefId>();
@@ -42,7 +37,7 @@ namespace diesel {
 
         auto objectStartPos = reader.GetPosition();
 
-        diesel::objectdatabase::typeidclasses::PersistentObject* obj = diesel::objectdatabase::typeidclasses::ConstructPersistentObjectFromTypeId(type_id, version);
+        diesel::objectdatabase::typeidclasses::PersistentObject* obj = diesel::objectdatabase::typeidclasses::ConstructPersistentObjectFromTypeId(type_id, loadParameters.version);
 
         obj->load(reader, ref_map, loadParameters);
 
@@ -71,6 +66,9 @@ namespace diesel {
 #define REGISTER_TYPEID(clazz, clazzTypeId)
     //if(typeId == clazzTypeId) return new clazz(version);
     typeidclasses::PersistentObject* typeidclasses::ConstructPersistentObjectFromTypeId(TypeId typeId, diesel::EngineVersion version) {
+
+      if (typeId == typeids::PersistentObject)
+        return new PersistentObject();
 
       if (typeId == typeids::Object3D)
         return new Object3D();

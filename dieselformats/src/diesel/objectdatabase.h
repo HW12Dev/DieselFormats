@@ -69,7 +69,7 @@ TYPE_ID_ENTRY(GCMShader, 0x3DF69E08) \
 TYPE_ID_ENTRY(GCMShaderLibrary, 0xF38A9F49)
 
 
-#define PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(typeName) virtual TypeId type_id() { return diesel::objectdatabase::typeids::TypeIds::##typeName; }
+#define PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(typeName) virtual TypeId type_id() const { return diesel::objectdatabase::typeids::TypeIds::##typeName; }
 
 namespace diesel {
   namespace objectdatabase {
@@ -94,6 +94,8 @@ namespace diesel {
       public:
         virtual void load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters);
         PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(PersistentObject);
+
+        const diesel::modern::Idstring& get_name() const { return this->_name; } // Not from diesel
 
       private:
         diesel::modern::Idstring _name;
@@ -126,7 +128,7 @@ namespace diesel {
 
     class ObjectDatabase {
     public:
-      ObjectDatabase(Reader& reader, diesel::EngineVersion version, diesel::FileSourcePlatform sourcePlatform, diesel::Renderer renderer = diesel::Renderer::UNSPECIFIED);
+      ObjectDatabase(Reader& reader, const diesel::DieselFormatsLoadingParameters& loadParameters);
       ~ObjectDatabase();
 
 

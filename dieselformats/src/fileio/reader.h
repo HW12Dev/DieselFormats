@@ -110,6 +110,7 @@ public:
 
   /// <summary>
   /// Read's a modern Diesel formatted zlib compressed buffer from the input file into memory. (modern diesel format is "{uncompressedSize:u64}{compressedBufferSize:u32}{compressedBuffer:char[compressedBufferSize]}"
+  /// Endian swaps aren't copied from the input reader to the output reader
   /// </summary>
   /// <param name="outReader"></param>
   void ReadCompressedDataStore(Reader& outReader);

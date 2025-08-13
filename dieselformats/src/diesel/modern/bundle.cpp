@@ -15,8 +15,24 @@ namespace diesel {
       return this->name < b.name;
     }
 
+    bool diesel::modern::DBExtKey::operator<(const DBExtKey& b) {
 
-#pragma region Transports
+      if (this->_type <= b._type) {
+        if (this->_type < b._type) return true;
+
+        auto v7 = b._name;
+        auto v8 = this->_name;
+        auto v9 = v7;
+        auto v10 = v8;
+
+        if (v8 <= v7
+          && (v8 < v7 || v10 < v9 || v8 <= v7 && this->_properties < b._properties)) return 1;
+      }
+      return false;
+    }
+
+
+#pragma region MultiFileTransport
 
     MultiFileTransport::MultiFileTransport(const std::filesystem::path& basePath, const DieselFormatsLoadingParameters& version) : Transport(version) {
       this->basePath = basePath;
@@ -34,149 +50,153 @@ namespace diesel {
       return false;
     }
 
+#pragma endregion
 
+#pragma region PackageBundle
+
+    const std::vector<diesel::modern::ResourceID>& PackageBundle::GetResources() { return this->resources; }
+    PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& inReader, const DieselFormatsLoadingParameters& version) : Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
+      this->sourceFile = source;
+
+      Reader reader;
+      if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
+        inReader.ReadCompressedDataStore(reader);
+      }
+      else {
+        reader = inReader;
+      }
+
+      reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
+
+      if (reader.GetFileSize() == 0)
+        return;
+
+      auto start = reader.GetPosition();
+      auto size = reader.ReadType<uint32_t>();
+
+      diesel::modern::Vector<diesel::modern::Pair<unsigned int, unsigned int>> _header(reader, version);
+
+      if (_header._data != 0) {
+        reader.SetPosition(start + 4 + _header._data); // start + size field size + _header._data
+
+        for (int i = 0; i < _header._size; i++) {
+          auto db_key = reader.ReadType<uint32_t>();
+          auto unk1 = reader.ReadType<uint32_t>();
+
+          this->header.push_back(std::make_pair(db_key, unk1));
+        }
+      }
+
+      reader.ReadType<uint32_t>(); // header typeid (TypeId_BundleHeader)
+
+      start = reader.GetPosition();
+
+      size = reader.ReadType<uint32_t>();
+
+      diesel::modern::Vector<ResourceID> _resources(reader, version);
+
+      if (_resources._data != 0) {
+        reader.SetPosition(start + 4 + _resources._data); // start + size field size + _resources._data
+
+
+        for (int i = 0; i < _resources._size; i++) {
+          diesel::modern::ResourceID resource{};
+          resource.type = reader.ReadType<uint64_t>();
+          resource.name = reader.ReadType<uint64_t>();
+
+          this->resources.push_back(resource);
+        }
+      }
+
+      reader.ReadType<uint32_t>(); // resources typeid (TypeId_PackageBundle)
+
+    }
+    bool PackageBundle::open(Reader& outReader, unsigned int dbKey) {
+      int headerIndex = -1;
+      for (int i = 0; i < this->header.size(); i++) {
+        if (this->header[i].first == dbKey) {
+          headerIndex = i;
+          break;
+        }
+      }
+      if (headerIndex == -1)
+        return false;
+
+      OpenDataFile();
+
+      outReader = this->fileContents;
+
+      unsigned long long startPos = this->header[headerIndex].second;
+      outReader.SetPosition(startPos);
+
+      unsigned long long endPos = -1;
+
+      if (headerIndex == this->header.size() - 1) {
+        endPos = outReader.GetFileSize();
+      }
+      else {
+        endPos = this->header[headerIndex + 1].second;
+      }
+      outReader.SetReplacementSize(endPos - startPos);
+
+      return true;
+    }
+    size_t PackageBundle::GetFileSize(unsigned int dbKey) {
+      int headerIndex = -1;
+      for (int i = 0; i < this->header.size(); i++) {
+        if (this->header[i].first == dbKey) {
+          headerIndex = i;
+          break;
+        }
+      }
+      if (headerIndex == -1)
+        return -1;
+
+      size_t startPos = this->header[headerIndex].second;
+      size_t endPos = -1;
+
+      if (headerIndex == this->header.size() - 1) {
+        this->OpenDataFile();
+
+        endPos = this->fileContents.GetFileSize();
+
+      }
+      else {
+        endPos = this->header[headerIndex + 1].second;
+      }
+
+      return endPos - startPos;
+    }
+
+    void PackageBundle::OpenDataFile() {
+      if (this->fileContents.Valid())
+        return;
+
+
+      std::wstring dataFileName = this->sourceFile.filename().generic_wstring();
+      auto findResult = dataFileName.find(L"_h");
+      if (findResult != std::wstring::npos) {
+        dataFileName = dataFileName.replace(findResult, findResult + sizeof(L"_h"), L"") + this->sourceFile.extension().generic_wstring();
+      }
+      std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
+
+      Reader realDataFileReader;
+      Reader dataFileReader(dataBundlePath);
+
+      if (engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || engineVersion.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
+        dataFileReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(engineVersion));
+        dataFileReader.ReadCompressedDataStore(realDataFileReader);
+      }
+      else {
+        realDataFileReader = dataFileReader;
+      }
+
+      this->fileContents = realDataFileReader;
+    }
 
 #pragma endregion
 
-    namespace blobtypes {
-      const std::vector<diesel::modern::ResourceID>& PackageBundle::GetResources() { return this->resources; }
-      PackageBundle::PackageBundle(const std::filesystem::path& source, Reader& inReader, const DieselFormatsLoadingParameters& version) : Transport(version) { // merge of PackageBundle::PackageBundle and PackageBundle::resources
-        this->sourceFile = source;
-
-        Reader reader;
-        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE)) {
-          inReader.ReadCompressedDataStore(reader);
-        }
-        else {
-          reader = inReader;
-        }
-
-        if (reader.GetFileSize() == 0)
-          return;
-
-        auto start = reader.GetPosition();
-        auto size = reader.ReadType<uint32_t>();
-
-        diesel::modern::Vector<diesel::modern::Pair<unsigned int, unsigned int>> _header(reader, version);
-
-        if (_header._data != 0) {
-          reader.SetPosition(start + 4 + _header._data); // start + size field size + _header._data
-
-          for (int i = 0; i < _header._size; i++) {
-            auto db_key = reader.ReadType<uint32_t>();
-            auto unk1 = reader.ReadType<uint32_t>();
-
-            this->header.push_back(std::make_pair(db_key, unk1));
-          }
-        }
-
-        reader.ReadType<uint32_t>(); // header typeid (TypeId_BundleHeader)
-
-        start = reader.GetPosition();
-
-        size = reader.ReadType<uint32_t>();
-
-        diesel::modern::Vector<ResourceID> _resources(reader, version);
-
-        if (_resources._data != 0) {
-          reader.SetPosition(start + 4 + _resources._data); // start + size field size + _resources._data
-
-
-          for (int i = 0; i < _resources._size; i++) {
-            diesel::modern::ResourceID resource{};
-            resource.type = reader.ReadType<uint64_t>();
-            resource.name = reader.ReadType<uint64_t>();
-
-            this->resources.push_back(resource);
-          }
-        }
-
-        reader.ReadType<uint32_t>(); // resources typeid (TypeId_PackageBundle)
-
-      }
-      bool PackageBundle::open(Reader& outReader, unsigned int dbKey) {
-        int headerIndex = -1;
-        for (int i = 0; i < this->header.size(); i++) {
-          if (this->header[i].first == dbKey) {
-            headerIndex = i;
-            break;
-          }
-        }
-        if (headerIndex == -1)
-          return false;
-
-        if (!this->fileContents.Valid()) {
-          std::wstring dataFileName = this->sourceFile.filename().generic_wstring();
-          auto findResult = dataFileName.find(L"_h");
-          if (findResult != std::wstring::npos) {
-            dataFileName = dataFileName.replace(findResult, findResult + sizeof(L"_h"), L"") + this->sourceFile.extension().generic_wstring();
-          }
-
-          std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
-          this->fileContents = Reader(dataBundlePath);
-
-          /*if (this->engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
-            finalReader.ReadCompressed(this->fileContents);
-          }
-          else {
-            this->fileContents = finalReader;
-          }*/
-        }
-
-        outReader = this->fileContents;
-
-        unsigned long long startPos = this->header[headerIndex].second;
-        outReader.SetPosition(startPos);
-
-        unsigned long long endPos = -1;
-
-        if (headerIndex == this->header.size() - 1) {
-          endPos = outReader.GetFileSize();
-        }
-        else {
-          endPos = this->header[headerIndex + 1].second;
-        }
-        outReader.SetReplacementSize(endPos - startPos);
-
-        return true;
-      }
-      size_t PackageBundle::GetFileSize(unsigned int dbKey) {
-        int headerIndex = -1;
-        for (int i = 0; i < this->header.size(); i++) {
-          if (this->header[i].first == dbKey) {
-            headerIndex = i;
-            break;
-          }
-        }
-        if (headerIndex == -1)
-          return -1;
-
-        size_t startPos = this->header[headerIndex].second;
-        size_t endPos = -1;
-
-        if (headerIndex == this->header.size() - 1) {
-          if (!this->fileContents.Valid()) {
-            std::wstring dataFileName = this->sourceFile.filename().generic_wstring();
-            auto findResult = dataFileName.find(L"_h");
-            if (findResult != std::wstring::npos) {
-              dataFileName = dataFileName.replace(findResult, findResult + sizeof(L"_h"), L"") + this->sourceFile.extension().generic_wstring();
-            }
-            std::filesystem::path dataBundlePath = this->sourceFile.parent_path() / dataFileName;
-
-            Reader dataFileReader(dataBundlePath);
-            this->fileContents = dataFileReader;
-          }
-
-          endPos = this->fileContents.GetFileSize();
-          
-        }
-        else {
-          endPos = this->header[headerIndex + 1].second;
-        }
-
-        return endPos - startPos;
-      }
-    }
+#pragma region Bundle
 
     Bundle::Bundle(const std::filesystem::path& basePath, const std::string& name, const DieselFormatsLoadingParameters& version) : Transport(version) {
       this->basePath = basePath;
@@ -192,6 +212,42 @@ namespace diesel {
             continue;
 
           Reader reader(filePath);
+          reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
+
+          auto header_size = reader.ReadType<uint32_t>();
+
+          diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
+
+          reader.SetPosition(header._data._data + 4);
+
+          HeaderVectorType* header_vector = new HeaderVectorType();
+
+          for (int i = 0; i < header._data._size; i++) {
+            auto key = reader.ReadType<uint32_t>();
+
+            auto offset = reader.ReadType<uint32_t>();
+            auto size = reader.ReadType<uint32_t>();
+
+            header_vector->push_back(std::make_pair(key, diesel::modern::Bundle::BundleEntry{ .offset = offset, .size = size }));
+          }
+
+          this->_pdth_headers.push_back(header_vector);
+
+        }
+      }
+      else if (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
+        for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) {
+          auto filePath = basePath / (name + "_" + std::to_string(i_bundle_file) + "_h.bundle");
+
+          if (!std::filesystem::exists(filePath))
+            continue;
+
+          Reader rawFileReader(filePath);
+          rawFileReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
+
+          Reader reader;
+
+          rawFileReader.ReadCompressedDataStore(reader);
           reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
 
           auto header_size = reader.ReadType<uint32_t>();
@@ -341,6 +397,8 @@ namespace diesel {
       return false;
     }
 
+#pragma endregion
+
 #pragma region bundle_db.blb
     BundleDatabase::BundleDatabase() {
       this->_next_key = -1;
@@ -483,22 +541,6 @@ namespace diesel {
 
     }
 #pragma endregion
-
-    bool diesel::modern::DBExtKey::operator<(const DBExtKey& b) {
-
-      if (this->_type <= b._type) {
-        if (this->_type < b._type) return true;
-
-        auto v7 = b._name;
-        auto v8 = this->_name;
-        auto v9 = v7;
-        auto v10 = v8;
-
-        if (v8 <= v7
-          && (v8 < v7 || v10 < v9 || v8 <= v7 && this->_properties < b._properties)) return 1;
-      }
-      return false;
-    }
 
   }
 }
