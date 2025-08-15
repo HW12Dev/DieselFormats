@@ -14,6 +14,10 @@ Writer::Writer(const std::filesystem::path& path) {
   this->file = CreateFileW(path.wstring().c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 }
 
+Writer::~Writer() {
+  this->Close();
+}
+
 void Writer::Close() {
   if (this->file != INVALID_HANDLE_VALUE) {
     CloseHandle(file);
@@ -53,7 +57,7 @@ void Writer::WriteReader(Reader& reader) {
   //auto size = reader.GetFileSize() - reader.GetPosition(); // Line causes crashes if reading a file stream with replacement size set and position is greater than replacement size.
   auto size = reader.GetFileSize();
 
-  char* buffer = new char[size];
+  char* buffer = new char[size]; // Can reduce memory usage by checking if the reader is already a stream held in memory.
   reader.ReadBytesToBuffer(buffer, size);
 
   this->WriteBytes(buffer, size);

@@ -13,6 +13,7 @@ class Reader;
 class Writer {
 public:
   Writer(const std::filesystem::path& path);
+  ~Writer();
 
 public:
   void Close();
