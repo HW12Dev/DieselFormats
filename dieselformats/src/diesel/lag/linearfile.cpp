@@ -172,7 +172,8 @@ namespace diesel {
       delete[] uncompressed_block;
 
       outFileContentsReader = Reader(file_contents, fileEntry->size);
+      return true;
     }
 
-}
+  }
 }

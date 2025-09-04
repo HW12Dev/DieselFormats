@@ -59,6 +59,26 @@ namespace diesel {
     return sanitised;
   }
 
+  std::string ReplaceInString(std::string str, const std::string& find, const std::string& replace)
+  {
+    size_t findInStr = std::string::npos;
+    while (findInStr = str.find(find), findInStr != std::string::npos) {
+      str.replace(findInStr, find.size(), replace);
+    }
+
+    return str;
+  }
+
+  std::wstring ReplaceInString(std::wstring str, const std::wstring& find, const std::wstring& replace)
+  {
+    size_t findInStr = std::wstring::npos;
+    while (findInStr = str.find(find), findInStr != std::wstring::npos) {
+      str.replace(findInStr, find.size(), replace);
+    }
+
+    return str;
+  }
+
   bool VerifyBlobType(Reader& reader, uint32_t blobId)
   {
     if (reader.GetFileSize() < 4)

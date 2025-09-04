@@ -161,7 +161,10 @@ namespace diesel {
     this->_values = InplaceArray<Value>(reader, version);
   }
 
+  // General utilities
   std::string SanitiseStringForXml(const std::string& str);
+  std::string ReplaceInString(std::string str, const std::string& find, const std::string& replace);
+  std::wstring ReplaceInString(std::wstring str, const std::wstring& find, const std::wstring& replace);
 
   bool VerifyBlobType(Reader& reader, uint32_t blobId);
 

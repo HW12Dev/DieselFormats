@@ -25,6 +25,7 @@
 #include <functional>
 #include <utility>
 #include <unordered_set>
+#include <inttypes.h>
 
 using namespace diesel::modern;
 using namespace diesel::objectdatabase::typeidclasses;
@@ -181,7 +182,7 @@ namespace std {
 
 using namespace diesel::modern;
 
-void pd2_ps3_extract_test() {
+void extract_test(diesel::EngineVersion engineVersion, diesel::FileSourcePlatform sourcePlatform) {
   //std::filesystem::path inputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2";
   //std::filesystem::path outputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2 Unpack";
   std::filesystem::path inputDirectory = "./";
@@ -198,7 +199,7 @@ void pd2_ps3_extract_test() {
     hashlistr.Close();
   }
 
-  diesel::DieselFormatsLoadingParameters loadingParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE, diesel::Renderer::UNSPECIFIED, diesel::FileSourcePlatform::SONY_PLAYSTATION_3);
+  diesel::DieselFormatsLoadingParameters loadingParams = diesel::DieselFormatsLoadingParameters(engineVersion, diesel::Renderer::UNSPECIFIED, sourcePlatform);
 
   Reader bdbReader(inputDirectory / "all.blb");
   bdbReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadingParams));
@@ -213,8 +214,8 @@ void pd2_ps3_extract_test() {
     if (!std::filesystem::is_directory(i->path())) {
       if (i->path().extension() != ".bundle")
         continue;
-      if (i->path().string().find("_h.bundle") == std::string::npos)
-        continue;
+      //if (i->path().string().find("_h.bundle") == std::string::npos)
+      //  continue;
       if (i->path().string().find("all") != std::string::npos)
         continue;
 
@@ -239,6 +240,12 @@ void pd2_ps3_extract_test() {
     }
   }
 
+  std::map<int, std::string> properties;
+
+  for (auto& prop : bdb.GetProperties()) {
+    properties.insert({ prop.second, hashlist->GetIdstringSource(prop.first) });
+  }
+
   for (auto& entry : bdb.GetLookup()) {
     bool foundEntry = false;
     Reader entryContents;
@@ -256,7 +263,18 @@ void pd2_ps3_extract_test() {
       continue; // Packages and streamed bundles do not contain this file, skip it.
     }
 
-    std::filesystem::path entryOutPath = outputDirectory / (hashlist->GetIdstringSource(entry.first._name) + "." + hashlist->GetIdstringSource(entry.first._type));
+    std::string outputFileName = hashlist->GetIdstringSource(entry.first._name);
+
+    int entryProperties = entry.first._properties;
+    if (entryProperties != 0) {
+      for (auto& prop : properties) {
+        if ((entryProperties & prop.first) != 0) {
+          outputFileName += "." + prop.second;
+        }
+      }
+    }
+
+    std::filesystem::path entryOutPath = outputDirectory / (outputFileName + "." + hashlist->GetIdstringSource(entry.first._type));
 
     if(!std::filesystem::exists(entryOutPath.parent_path()))
       std::filesystem::create_directories(entryOutPath.parent_path());
@@ -271,6 +289,141 @@ void pd2_ps3_extract_test() {
     delete package;
   }
 }
+
+
+void bc2_xb360_extract_test() {
+  //std::filesystem::path inputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2";
+  //std::filesystem::path outputDirectory = "X:\\Projects\\DieselEngineExplorer\\test_files\\PS3 PD2 Unpack";
+  //std::filesystem::path inputDirectory = "E:\\dieselgames\\Bionic Commando - Rearmed 2 (World) (XBLA)\\unpack\\assets";
+  //std::filesystem::path outputDirectory = "E:\\dieselgames\\Bionic Commando - Rearmed 2 (World) (XBLA)\\unpack\\assetsunpack";
+  std::filesystem::path inputDirectory = "./assets";
+  std::filesystem::path outputDirectory = "./assetsunpack";
+
+  diesel::DieselFormatsLoadingParameters loadingParams = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::BIONIC_COMMANDO_REARMED2, diesel::Renderer::UNSPECIFIED, diesel::FileSourcePlatform::MICROSOFT_XBOX_360);
+
+  Reader bdbReader(inputDirectory / "all.blb");
+  bdbReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadingParams));
+  BundleDatabase bdb;
+
+  printf("Loading Bundle Database\n");
+
+  bdb.Read(bdbReader, loadingParams);
+
+  std::set<ResourceID> bundleDatabaseAssets;
+
+  for (auto& entry : bdb.GetLookup()) {
+    bundleDatabaseAssets.insert(ResourceID{ .type = entry.first._type, .name = entry.first._name });
+  }
+
+  printf("Loaded Bundle Database. Lookup Entries: %" PRIu64 "\n", bundleDatabaseAssets.size());
+
+  printf("Loading streamed bundle\n");
+  Bundle bndl(inputDirectory, "all", loadingParams);
+
+  uint64_t bundleAssets = 0;
+
+  for (auto& header : bndl.GetHeaders()) {
+    bundleAssets += header->size();
+  }
+
+  printf("Loaded streamed bundle. Assets: %" PRIu64 "\n", bundleAssets);
+
+  std::vector<PackageBundle*> packages;
+
+  printf("Loading packages\n");
+
+  for (std::filesystem::recursive_directory_iterator i(inputDirectory), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+
+
+      Reader reader1(i->path());
+      reader1.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(loadingParams));
+      PackageBundle* package = new PackageBundle(i->path(), reader1, loadingParams);
+
+      packages.push_back(package);
+    }
+  }
+
+  printf("Loaded packages.\n");
+
+  Hashlist* hashlist = diesel::modern::GetGlobalHashlist();
+
+  int idstring_lookup_db_key = bdb.GetDBKeyFromTypeAndName(Idstring("idstring_lookup"), Idstring("idstring_lookup"));
+
+  if (idstring_lookup_db_key != -1) {
+    Reader idstringLookup;
+    bool opened = bndl.open(idstringLookup, idstring_lookup_db_key);
+    if (opened) {
+      hashlist->ReadFileToHashlist(idstringLookup);
+    }
+  }
+
+  std::map<int, std::string> properties;
+
+  for (auto& prop : bdb.GetProperties()) {
+    properties.insert({ prop.second, hashlist->GetIdstringSource(prop.first) });
+  }
+
+  printf("Extracting...\n");
+
+  uint64_t filesExtracted = 0;
+
+  for (auto& entry : bdb.GetLookup()) {
+    bool foundEntry = false;
+    Reader entryContents;
+
+    foundEntry = bndl.open(entryContents, entry.second);
+    if (!foundEntry) {
+      for (auto package : packages) {
+        foundEntry = package->open(entryContents, entry.second);
+
+        if (foundEntry)
+          break;
+      }
+    }
+    if (!foundEntry) {
+      continue; // Packages and streamed bundles do not contain this file, skip it.
+    }
+
+    std::string outputFileName = hashlist->GetIdstringSource(entry.first._name);
+
+    int entryProperties = entry.first._properties;
+    if (entryProperties != 0) {
+      for (auto& prop : properties) {
+        if ((entryProperties & prop.first) != 0) {
+          outputFileName += "." + prop.second;
+        }
+      }
+    }
+
+    std::filesystem::path entryOutPath = outputDirectory / (outputFileName + "." + hashlist->GetIdstringSource(entry.first._type));
+
+    if(!std::filesystem::exists(entryOutPath.parent_path()))
+      std::filesystem::create_directories(entryOutPath.parent_path());
+
+    try {
+      Writer outWriter(entryOutPath);
+      outWriter.WriteReader(entryContents);
+      outWriter.Close();
+      filesExtracted++;
+    }
+    catch (std::runtime_error err) {
+      std::cout << err.what() << std::endl;
+    }
+
+  }
+
+  printf("Successfully extracted %" PRIu64 " files\n", filesExtracted);
+
+  for (auto package : packages) {
+    delete package;
+  }
+}
+
 
 void undatacompile(const std::filesystem::path& inPackedAssets, const std::filesystem::path& inoutUnpackedAssets, diesel::EngineVersion version) {
 
@@ -391,36 +544,347 @@ void undatacompile(const std::filesystem::path& inPackedAssets, const std::files
   }
 }
 
+bool open_package(std::vector<PackageBundle*>& packages, unsigned int dbKey, Reader& reader)
+{
+  for (auto package : packages) {
+    if (package->open(reader, dbKey))
+      return true;
+  }
+  return false;
+}
+
+std::vector<PackageBundle*> open_packages(const char* dir)
+{
+  std::vector<PackageBundle*> packages;
+  for (std::filesystem::recursive_directory_iterator i(dir), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("_h.bundle") == std::string::npos)
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+
+
+      Reader reader1(i->path());
+      PackageBundle* package = new PackageBundle(i->path(), reader1, diesel::EngineVersion::PAYDAY_2_LATEST);
+
+
+      packages.push_back(package);
+    }
+  }
+
+  return packages;
+}
+
+struct EntryInfo {
+  unsigned int size;
+  unsigned int offset;
+};
+
+class Payday2StreamedBundleHeader {
+public:
+  Payday2StreamedBundleHeader() {};
+
+public:
+  void Read(Reader& reader, const diesel::DieselFormatsLoadingParameters& version);
+  void Write(Writer& writer, const diesel::DieselFormatsLoadingParameters& version);
+
+public:
+  std::vector<Bundle::HeaderVectorType*> _headers;
+  std::map<Bundle::HeaderVectorType*, int> _header_indices;
+};
+
+
+void Payday2StreamedBundleHeader::Read(Reader& reader, const diesel::DieselFormatsLoadingParameters& version)
+{
+  auto headers = BlobSaverChunk(reader, version);
+
+  reader.SetPosition(headers._data);
+
+  reader.AddPosition(4);
+  for (int i = 0; i < headers._size; i++) {
+    int bundleIndex = reader.ReadType<uint32_t>(); // index of the bundle, important to be saved as pd2 skips the 67th bundle
+
+    diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
+
+    auto oldPosition = reader.GetPosition();
+
+    reader.SetPosition(header._data._data + 4);
+
+    Bundle::HeaderVectorType* header_vector = new Bundle::HeaderVectorType();
+
+    for (int j = 0; j < header._data._size; j++) {
+      auto key = reader.ReadType<uint32_t>();
+
+      auto offset = reader.ReadType<uint32_t>();
+      auto size = reader.ReadType<uint32_t>();
+
+      header_vector->push_back(std::make_pair(key, Bundle::BundleEntry{ .offset = offset, .size = size }));
+    }
+
+    this->_headers.push_back(header_vector);
+    this->_header_indices.insert(std::make_pair(header_vector, bundleIndex));
+
+    reader.SetPosition(oldPosition);
+  }
+
+}
+void Payday2StreamedBundleHeader::Write(Writer& writer, const diesel::DieselFormatsLoadingParameters& version)
+{
+  auto startPosition = writer.GetPosition();
+
+  writer.WriteType<uint32_t>(0); // blob saver total size
+  writer.WriteType<uint32_t>(_headers.size());
+  writer.WriteType<uint32_t>(_headers.size()); // capacity
+
+  //auto writeDataPosition = writer.GetPosition();
+  //writer.WriteType(0);
+  //writer.SetPosition(writeDataPosition);
+
+  writer.WriteType<uint32_t>(16);
+
+  writer.AddPosition(4); // reader.addposition(4) above, before main loop
+
+  std::map<Bundle::HeaderVectorType*, uint64_t> headerOutPositions;
+  for (int i = 0; i < _headers.size(); i++) {
+    
+    writer.WriteType<uint32_t>(_header_indices[_headers[i]]);
+
+    uint64_t headerOutPos = 0;
+    diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry>::Write(writer, version, _headers[i]->size(), _headers[i]->size(), true, headerOutPos);
+    headerOutPositions.insert(std::make_pair(_headers[i], headerOutPos));
+  }
+
+  for (int i = 0; i < _headers.size(); i++) {
+    auto dataPos = writer.GetPosition();
+    writer.SetPosition(headerOutPositions[_headers[i]]);
+    if(_headers[i]->size() == 0) {
+      writer.WriteType<uint32_t>(0);
+    }
+    else {
+      writer.WriteType<uint32_t>(dataPos - 4);
+    }
+    writer.SetPosition(dataPos);
+
+    for (auto& entry : (*_headers[i])) {
+      writer.WriteType<uint32_t>(entry.first);
+      writer.WriteType<uint32_t>(entry.second.offset);
+      writer.WriteType<uint32_t>(entry.second.size);
+    }
+  }
+
+  auto currentSize = writer.GetPosition();
+  writer.SetPosition(startPosition);
+  writer.WriteType<uint32_t>(currentSize);
+  writer.SetPosition(currentSize);
+
+  writer.WriteType<uint32_t>(0x94C51F19); // Bundle typeid
+  writer.WriteType<uint32_t>(0); //writer.AddPosition(4);
+}
+
+void pd2_package_merger()
+{
+  std::filesystem::path assetsPath = R"(X:\SteamLibrary\steamapps\common\PAYDAY 2\assets)";
+
+  Payday2StreamedBundleHeader streamedBundleHeader;
+  {
+    Reader allReader(assetsPath / "all_h.bundle");
+    streamedBundleHeader.Read(allReader, diesel::EngineVersion::PAYDAY_2_LATEST);
+    allReader.Close();
+  }
+
+  BundleDatabase bundleDatabase;
+  {
+    Reader bdbReader(assetsPath / "bundle_db.blb");
+    bundleDatabase.Read(bdbReader, diesel::EngineVersion::PAYDAY_2_LATEST);
+    bdbReader.Close();
+  }
+
+  std::set<unsigned int> luaFiles;
+  for (auto& resource : bundleDatabase.GetLookup()) {
+    if (resource.first._type == Idstring("lua")) {
+      luaFiles.insert(resource.second);
+    }
+  }
+
+  //std::set<ResourceID> uniqueResources;
+  auto packages = open_packages(assetsPath.string().c_str());
+
+  for (auto package : packages) {
+    for (auto& resource : package->GetResources()) {
+      //uniqueResources.insert(resource);
+    }
+  }
+
+  std::set<unsigned int> processedDbKeys;
+
+  std::map<unsigned int, EntryInfo> fileInfo;
+
+  int current_streamed_bundle = 134;
+  Writer outputFile(std::format("./all_{}.bundle", current_streamed_bundle));
+  Bundle::HeaderVectorType* header_vec = new Bundle::HeaderVectorType();
+  //streamedBundleHeader._headers.push_back(header_vec);
+  //streamedBundleHeader._header_indices.insert({ header_vec, current_streamed_bundle });
+
+
+  uint64_t outputFilePos = 0;
+  for (auto package : packages) {
+    std::set<unsigned int> packageKeys;
+    for (auto& key : package->header) {
+      packageKeys.insert(key.first);
+    }
+
+    for (auto& resource : packageKeys) {
+      //unsigned int dbKey = bundleDatabase.GetDBKeyFromTypeAndName(resource.type, resource.name);
+
+      unsigned int dbKey = resource;
+
+      //if (luaFiles.contains(dbKey))
+      //  __debugbreak();
+
+      if (!processedDbKeys.contains(dbKey)) {
+        processedDbKeys.insert(dbKey);
+        Reader file;
+        bool open = package->open(file, dbKey);
+
+
+        if (open) {
+          if (outputFilePos + file.GetFileSize() > 0xFFFFFFFF) {
+            outputFilePos = 0;
+
+            streamedBundleHeader._headers.push_back(header_vec);
+            streamedBundleHeader._header_indices.insert({ header_vec, current_streamed_bundle });
+
+            current_streamed_bundle++;
+            header_vec = new Bundle::HeaderVectorType();
+            outputFile.Close();
+            outputFile = Writer(std::format("./all_{}.bundle", current_streamed_bundle));
+          }
+
+          if (luaFiles.contains(dbKey)) {
+            auto fs = file.GetFileSize();
+            char* buffer = new char[fs];
+            file.ReadBytesToBuffer(buffer, fs);
+
+            for (int i = 0; i < fs; i++) {
+              int keyIndex = ((fs + i) * 7) % LuaDecryptionKeyLen;
+              buffer[i] ^= (char)(LuaDecryptionKey[keyIndex] * (fs - i));
+            }
+            file = Reader(buffer, fs);
+          }
+
+
+          header_vec->push_back(std::make_pair(
+            dbKey,
+            Bundle::BundleEntry{ .offset = outputFilePos, .size = file.GetFileSize() }
+          ));
+
+          fileInfo.insert(std::make_pair(dbKey, EntryInfo{ .size = (unsigned int)file.GetFileSize(), .offset = (unsigned int)outputFilePos }));
+          outputFilePos += file.GetFileSize();
+          
+          //fileInfo.insert(std::make_pair(dbKey, EntryInfo{ .size = (unsigned int)file.GetFileSize(), .offset = (unsigned int)outputFile.GetPosition() }));
+          outputFile.WriteReader(file);
+          file.Close();
+        }
+      }
+    }
+  }
+  streamedBundleHeader._headers.push_back(header_vec);
+  streamedBundleHeader._header_indices.insert({ header_vec, current_streamed_bundle });
+  outputFile.Close();
+
+
+  Writer allh("all_h.bundle");
+  streamedBundleHeader.Write(allh, diesel::EngineVersion::PAYDAY_2_LATEST);
+  allh.Close();
+
+  /*for (auto& resource : uniqueResources) {
+    auto dbKey = bundleDatabase.GetDBKeyFromTypeAndName(resource.type, resource.name);
+
+    if (dbKey == -1)
+      continue;
+
+    Reader fileContents;
+    if (open_package(packages, dbKey, fileContents)) {
+      outputFile.WriteReader(fileContents);
+    }
+  }*/
+  outputFile.Close();
+
+  __debugbreak();
+}
+
 int main() {
-  //Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
-  //diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
-  //hashlist.Close();
+  /*{
+    Reader hashlist("X:\\Projects\\DieselEngineExplorer\\hashlist.txt");
+    diesel::modern::GetGlobalHashlist()->ReadFileToHashlist(hashlist);
+    hashlist.Close();
+  }*/
+
+  //bc2_xb360_extract_test();
+
+  Reader b("X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets\\bundle_db.blb");
+  BundleDatabase bd;
+  bd.Read(b, diesel::EngineVersion::PAYDAY_2_LATEST);
+
+  __debugbreak();
 
   return 0;
 
-  auto testsd = [](std::string path, diesel::EngineVersion ver) {
-    Reader r(path);
-    diesel::modern::ScriptData sd;
-    sd.Read(r, ver);
+  diesel::DieselFormatsLoadingParameters params = diesel::DieselFormatsLoadingParameters(diesel::EngineVersion::PAYDAY_2_LATEST, diesel::Renderer::DIRECTX9, diesel::FileSourcePlatform::WINDOWS_32);
+  pd2_package_merger();
 
-    std::cout << diesel::modern::ScriptData::DumpScriptDataToGenericXml(sd) << std::endl;
-    };
+  //return 0;
 
-  auto tested = [](std::string path, diesel::EngineVersion ver) {
-    Reader r(path);
-    diesel::modern::EngineData sd;
-    sd.Read(r, ver);
+  //std::filesystem::path optimised_assets_dir = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets_optimised";
+  std::filesystem::path optimised_assets_dir = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets";
 
-    std::cout << diesel::modern::EngineData::DumpReferenceToXml(sd.GetRoot()) << std::endl;
-    };
+  /*
+  {
+    auto inpath = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets\\00b277d8d36bfd4c_h.bundle";
+    auto outpath = "X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets_optimised\\00b277d8d36bfd4c_h.bundle";
+    Reader pkgr(inpath);
+    PackageBundle pkg(inpath, pkgr, params);
 
-  tested("X:/Projects/DieselEngineExplorer/test_files/enginedata/pdthlatest/render_config.render_config", diesel::EngineVersion::PAYDAY_THE_HEIST_LATEST);
-  tested("X:/Projects/DieselEngineExplorer/test_files/enginedata/pd2/render_config.render_config", diesel::EngineVersion::PAYDAY_2_LATEST);
-  tested("X:/Projects/DieselEngineExplorer/test_files/enginedata/raid/render_config.render_config", diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+    Writer pkgw(outpath);
+    pkg.Write(pkgw, params);
+    pkgw.Close();
 
-  testsd("X:/Projects/DieselEngineExplorer/test_files/scriptdata/pdthlatest/bank_world.world", diesel::EngineVersion::PAYDAY_THE_HEIST_LATEST);
-  testsd("X:/Projects/DieselEngineExplorer/test_files/scriptdata/pd2/firestarter_day3_world.world", diesel::EngineVersion::PAYDAY_2_LATEST);
-  testsd("X:/Projects/DieselEngineExplorer/test_files/scriptdata/raid/forest_gumpy_world.world", diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST);
+    Reader pkgr2(inpath);
+    PackageBundle pkg2(inpath, pkgr2, params);
+  }
+  */
+
+  for (std::filesystem::recursive_directory_iterator i("X:\\SteamLibrary\\steamapps\\common\\PAYDAY 2\\assets_original"), end; i != end; ++i) {
+    if (!std::filesystem::is_directory(i->path())) {
+      if (i->path().extension() != ".bundle")
+        continue;
+      if (i->path().string().find("_h.bundle") == std::string::npos)
+        continue;
+      if (i->path().string().find("all") != std::string::npos)
+        continue;
+
+
+      Reader reader1(i->path());
+      PackageBundle package(i->path(), reader1, params);
+
+      package.header.clear();
+
+      Writer writer(optimised_assets_dir / i->path().filename());
+      package.Write(writer, params);
+
+      Writer contents(optimised_assets_dir / diesel::ReplaceInString(i->path().filename(), L"_h", L""));
+      contents.Close();
+    }
+  }
+
+
+  __debugbreak();
+  return 0;
+
+  //bc2_xb360_extract_test();
+
 
   return 0;
 

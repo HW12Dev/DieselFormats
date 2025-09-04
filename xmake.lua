@@ -1,7 +1,7 @@
 add_rules("mode.release", "mode.debug")
+set_defaultmode("debug")
 
-
-add_requires("qt6widgets 6.8.0", "qt6network 6.8.0")
+add_requires("qt6widgets 6.9.0", "qt6gui 6.9.0")
 
 includes("dieselformats")
 

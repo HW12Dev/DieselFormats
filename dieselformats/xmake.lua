@@ -17,4 +17,6 @@ target("DieselFormats")
 
   set_runtimes(is_mode("debug") and "MDd" or "MD")
 
+  --add_cxxflags("-Wall")
+
 target_end()

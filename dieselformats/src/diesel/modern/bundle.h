@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <filesystem>
 
 namespace diesel {
@@ -46,6 +47,7 @@ namespace diesel {
     public:
       PackageBundle(const std::filesystem::path& source, Reader& reader, const DieselFormatsLoadingParameters& version);
 
+      bool Write(Writer& writer, const DieselFormatsLoadingParameters& version);
     public:
       virtual bool open(Reader& outReader, unsigned int dbKey);
 
@@ -54,6 +56,7 @@ namespace diesel {
     private:
       void OpenDataFile();
     private:
+    public: // TODO: REMOVE THIS ACCESSOR
       Reader fileContents;
       std::filesystem::path sourceFile;
 
@@ -78,6 +81,14 @@ namespace diesel {
         uint64_t size;
       };
 
+      // Not from diesel
+      struct HeaderData {
+        // diesel stores this as an Archive in an array called "_archives" in the Bundle class
+        Reader bundleFileReader;
+        // also not from diesel, stored so we don't have to open the bundle file unless a file is actually access
+        std::filesystem::path bundleFileContentsSource;
+      };
+
       typedef std::vector<std::pair<unsigned int, diesel::modern::Bundle::BundleEntry>> HeaderVectorType;
     public:
       Bundle(const std::filesystem::path& basePath, const std::string& name, const DieselFormatsLoadingParameters& version);
@@ -85,8 +96,13 @@ namespace diesel {
     public:
       virtual bool open(Reader& outReader, unsigned int dbKey);
 
+      std::vector<HeaderVectorType*>& GetHeaders() { return _headers; }
     private:
       std::string name;
+
+      std::vector<HeaderVectorType*> _headers;
+      std::map<HeaderVectorType*, HeaderData> _archives;
+
       // PAYDAY: The Heist
       std::vector<HeaderVectorType*> _pdth_headers;
 
@@ -116,7 +132,7 @@ namespace diesel {
       // For advanced users only, do not call this if you do not know what it does
       void AddFile(DBExtKey extKey, unsigned int dbKey);
 
-      unsigned int GetNextKey() { if (_next_key == -1) { _next_key = 0; for (auto& entry : GetLookup()) { if (_next_key < entry.second) _next_key = entry.second; } _next_key++; } return _next_key; }
+      unsigned int GetNextKey() { return _next_key; }
       void SetNextKey(unsigned int next_key) { _next_key = next_key; }
 
     private:

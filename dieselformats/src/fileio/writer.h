@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <string>
+#include <memory>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -10,10 +11,33 @@
 #include <Windows.h>
 
 class Reader;
+
+class FileWriterContainer {
+public:
+  FileWriterContainer(const std::filesystem::path& path);
+  ~FileWriterContainer();
+
+  FileWriterContainer(const FileWriterContainer& other) = delete;
+  FileWriterContainer& operator=(const FileWriterContainer& other) = delete;
+  FileWriterContainer& operator=(FileWriterContainer& other) = delete;
+public:
+  void Close();
+
+  bool IsValid() const;
+
+  unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position);
+
+private:
+  HANDLE file;
+};
+
 class Writer {
 public:
   Writer(const std::filesystem::path& path);
   ~Writer();
+
+  Writer(const Writer& other);
+  Writer& operator=(const Writer& other);
 
 public:
   void Close();
@@ -49,5 +73,6 @@ public:
 private:
   bool swapEndiannessOfIntegers;
   unsigned long long position;
-  HANDLE file;
+  std::shared_ptr<FileWriterContainer> container;
+  //HANDLE file;
 };

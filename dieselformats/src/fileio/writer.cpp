@@ -4,25 +4,70 @@
 
 #include "fileio/zlibcompression.h"
 
-Writer::Writer(const std::filesystem::path& path) {
-
-  this->position = 0;
-  this->swapEndiannessOfIntegers = false;
-
+FileWriterContainer::FileWriterContainer(const std::filesystem::path& path) {
   this->file = INVALID_HANDLE_VALUE;
 
   this->file = CreateFileW(path.wstring().c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (this->file == INVALID_HANDLE_VALUE)
+    __debugbreak();
+}
+
+FileWriterContainer::~FileWriterContainer() {
+  this->Close();
+}
+
+void FileWriterContainer::Close() {
+  if (this->file != INVALID_HANDLE_VALUE) {
+    CloseHandle(file);
+    this->file = INVALID_HANDLE_VALUE;
+  }
+}
+
+bool FileWriterContainer::IsValid() const {
+  return this->file != INVALID_HANDLE_VALUE;
+}
+
+unsigned long long FileWriterContainer::WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) {
+  DWORD bytesWritten{};
+  LARGE_INTEGER li{};
+
+
+  SetFilePointerEx(this->file, LARGE_INTEGER{.QuadPart = (int64_t)position}, & li, FILE_BEGIN);
+  if (WriteFile(this->file, inBuffer, size, &bytesWritten, NULL) != TRUE) {
+    DWORD error = GetLastError();
+
+    __debugbreak();
+  }
+
+  return bytesWritten;
+}
+
+Writer::Writer(const std::filesystem::path& path) {
+  this->position = 0;
+  this->swapEndiannessOfIntegers = false;
+
+  this->container = std::make_shared<FileWriterContainer>(path);
 }
 
 Writer::~Writer() {
   this->Close();
 }
 
+Writer::Writer(const Writer& other) {
+  *this = other;
+}
+
+Writer& Writer::operator=(const Writer& other) {
+  this->container = other.container;
+  this->position = other.position;
+  this->swapEndiannessOfIntegers = other.swapEndiannessOfIntegers;
+
+  return *this;
+}
+
 void Writer::Close() {
-  if (this->file != INVALID_HANDLE_VALUE) {
-    CloseHandle(file);
-    this->file = INVALID_HANDLE_VALUE;
-  }
+  if (this->container && this->container.use_count() == 1)
+    this->container->Close();
 }
 
 unsigned long long Writer::GetPosition() const {
@@ -42,15 +87,7 @@ void Writer::SetSwapEndianness(bool swap) {
 }
 
 void Writer::WriteBytes(char* inBuffer, std::size_t size) {
-
-  DWORD bytesWritten{};
-  LARGE_INTEGER li{};
-
-
-  SetFilePointerEx(this->file, LARGE_INTEGER{.QuadPart = (int64_t)this->position}, & li, FILE_BEGIN);
-  WriteFile(this->file, inBuffer, size, &bytesWritten, NULL);
-
-  this->position += size;
+  this->position += this->container->WriteBytes(inBuffer, size, position);
 }
 
 void Writer::WriteReader(Reader& reader) {
