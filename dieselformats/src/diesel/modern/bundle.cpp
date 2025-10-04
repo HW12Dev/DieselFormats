@@ -106,7 +106,7 @@ namespace diesel {
           this->header.push_back(std::make_pair(db_key, unk1));
         }
       }
-      else {
+      else if (version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         reader.SetPosition(start + size + 4);
       }
 
@@ -136,7 +136,7 @@ namespace diesel {
           this->resources.push_back(resource);
         }
       }
-      else {
+      else if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         reader.SetPosition(start + size + 4);
       }
 
