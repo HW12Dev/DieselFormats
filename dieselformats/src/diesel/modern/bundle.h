@@ -8,6 +8,7 @@
 #include <vector>
 #include <unordered_map>
 #include <map>
+#include <set>
 #include <filesystem>
 
 namespace diesel {
@@ -62,6 +63,7 @@ namespace diesel {
 
       std::vector<std::pair<unsigned int, unsigned int>> header;
       std::vector<diesel::modern::ResourceID> resources;
+      std::set<Idstring> stream_types;
     };
 
 
@@ -103,13 +105,7 @@ namespace diesel {
       std::vector<HeaderVectorType*> _headers;
       std::map<HeaderVectorType*, HeaderData> _archives;
 
-      // PAYDAY: The Heist
-      std::vector<HeaderVectorType*> _pdth_headers;
-
-      // RAID: World War II
-      // NOTE: RAID very likely stores them in one vector instead of two
-      std::vector<HeaderVectorType*> _raid_stream_default_headers;
-      std::vector<HeaderVectorType*> _raid_stream_init_headers;
+      // Uncompressed sizes of streamed assets, db key is the index. Used in latest RAID and PAYDAY 2 for PlayStation 4, Xbox One and Nintendo Switch. If a key isn't present, it's not compressed.
       std::unordered_map<unsigned int, unsigned int> _raid_uncompressed_sizes;
     };
 

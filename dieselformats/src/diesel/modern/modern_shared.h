@@ -72,6 +72,11 @@ namespace diesel {
         this->_data = reader.ReadType<uint64_t>();
         reader.AddPosition(8); // _allocator
       }
+      else if (version.version == EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
+        this->_size = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_capacity = (unsigned long long)reader.ReadType<uint32_t>();
+        this->_data = (unsigned long long)reader.ReadType<uint32_t>();
+      }
       else if (version.version == EngineVersion::PAYDAY_2_LEGACY) {
         // this version doesn't have an _allocator field serialised
 

@@ -28,6 +28,7 @@ namespace diesel {
     PAYDAY_2_LATEST,
     //PAYDAY_2_XB1_PS4, // XB1, PS4 and Switch might all share 1 base engine version, but they are seperate for now
     //PAYDAY_2_SWITCH,
+    PAYDAY_2_MODERN_CONSOLE, // XB1, PS4 and Switch
     PAYDAY_2_LINUX_LATEST,
     RAID_WORLD_WAR_II_LATEST,
   };

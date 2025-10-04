@@ -72,7 +72,7 @@ namespace diesel {
       this->sourceFile = source;
 
       Reader reader;
-      if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || version.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2) {
+      if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || version.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2 || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         inReader.ReadCompressedDataStore(reader);
       }
       else {
@@ -87,9 +87,16 @@ namespace diesel {
       auto start = reader.GetPosition();
       auto size = reader.ReadType<uint32_t>();
 
+      if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE)
+        reader.AddPosition(4);
+
       diesel::modern::Vector<diesel::modern::Pair<unsigned int, unsigned int>> _header(reader, version);
 
       if (_header._data != 0) {
+        if (version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
+          _header._data += 4;
+        }
+
         reader.SetPosition(start + 4 + _header._data); // start + size field size + _header._data
 
         for (int i = 0; i < _header._size; i++) {
@@ -99,16 +106,25 @@ namespace diesel {
           this->header.push_back(std::make_pair(db_key, unk1));
         }
       }
+      else {
+        reader.SetPosition(start + size + 4);
+      }
 
-      reader.ReadType<uint32_t>(); // header typeid (TypeId_BundleHeader)
+      assert(reader.ReadType<uint32_t>() == TypeId_BundleHeader); // header typeid (TypeId_BundleHeader)
 
       start = reader.GetPosition();
 
       size = reader.ReadType<uint32_t>();
 
+      if (version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE)
+        reader.AddPosition(4);
+
       diesel::modern::Vector<ResourceID> _resources(reader, version);
 
       if (_resources._data != 0) {
+        if (version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
+          _resources._data += 4;
+        }
         reader.SetPosition(start + 4 + _resources._data); // start + size field size + _resources._data
 
 
@@ -120,9 +136,20 @@ namespace diesel {
           this->resources.push_back(resource);
         }
       }
+      else {
+        reader.SetPosition(start + size + 4);
+      }
 
-      reader.ReadType<uint32_t>(); // resources typeid (TypeId_PackageBundle)
+      assert(reader.ReadType<uint32_t>() == TypeId_PackageBundle); // resources typeid (TypeId_PackageBundle)
 
+      if (reader.AtEndOfBuffer())
+        return;
+
+      size_t streamTypesSize = (version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) ? reader.ReadType<uint64_t>() : reader.ReadType<uint32_t>();
+
+      for (int i = 0; i < streamTypesSize; i++) {
+        this->stream_types.insert(reader.ReadType<uint64_t>());
+      }
     }
     bool PackageBundle::Write(Writer& writer, const DieselFormatsLoadingParameters& version) {
       writer.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
@@ -162,7 +189,11 @@ namespace diesel {
 
       auto resourcesSize = writer.GetPosition();
 
-      writer.WriteType<uint32_t>(0);
+      writer.WriteType<uint32_t>((uint32_t)this->stream_types.size());
+
+      for (auto& streamed : this->stream_types) {
+        writer.WriteType<uint64_t>(streamed);
+      }
 
       headerSize -= sizeof(uint32_t); // size header
       headerData -= sizeof(uint32_t); // size header
@@ -269,7 +300,7 @@ namespace diesel {
       Reader realDataFileReader;
       Reader dataFileReader(dataBundlePath);
 
-      if (engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || engineVersion.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || engineVersion.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2) {
+      if (engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || engineVersion.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || engineVersion.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2 || engineVersion.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         dataFileReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(engineVersion));
         dataFileReader.ReadCompressedDataStore(realDataFileReader);
       }
@@ -288,7 +319,7 @@ namespace diesel {
       this->basePath = basePath;
       this->name = name;
 
-      assert(((version.sourcePlatform != diesel::FileSourcePlatform::NINTENDO_SWITCH && version.sourcePlatform != diesel::FileSourcePlatform::SONY_PLAYSTATION_4 && version.sourcePlatform != diesel::FileSourcePlatform::MICROSOFT_XBOX_ONE) && "Reading PAYDAY 2 Console bundles is unsupported due to annoying decompression problems"));
+      //assert(((version.sourcePlatform != diesel::FileSourcePlatform::NINTENDO_SWITCH && version.sourcePlatform != diesel::FileSourcePlatform::SONY_PLAYSTATION_4 && version.sourcePlatform != diesel::FileSourcePlatform::MICROSOFT_XBOX_ONE) && "Reading PAYDAY 2 Console bundles is unsupported due to annoying decompression problems"));
 
       std::vector<std::filesystem::path> bundleFilesToTryOpen;
 
@@ -301,14 +332,14 @@ namespace diesel {
             bundleFilesToTryOpen.push_back(path);
         }
       }
-      else if (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
+      else if (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || version.version == diesel::EngineVersion::PAYDAY_THE_HEIST_LATEST) {
         for (int i = 0; i < NUM_BUNDLES; i++) {
           auto path = basePath / (name + "_" + std::to_string(i) + "_h.bundle");
           if (std::filesystem::exists(path))
             bundleFilesToTryOpen.push_back(path);
         }
       }
-      else if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
+      else if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         for (int i = 0; i < NUM_BUNDLES; i++) {
           for(auto& bundleType : {"init", "default"}) {
             auto path = basePath / (std::string("stream_") + bundleType + "_" + std::to_string(i) + "_h.bundle");
@@ -333,12 +364,12 @@ namespace diesel {
           fileContentsSource = bundleFile;
         }
         else {
-          fileContentsSource = diesel::ReplaceInString(bundleFile.wstring(), L"_h", L"");
+          fileContentsSource = diesel::ReplaceInString(bundleFile.wstring(), L"_h.bundle", L".bundle");
         }
 
         Reader reader;
 
-        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
+        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
           Reader fileReader(bundleFile);
           fileReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
           fileReader.ReadCompressedDataStore(reader);
@@ -350,6 +381,9 @@ namespace diesel {
         reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
 
         auto header_size = reader.ReadType<uint32_t>();
+
+        if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE)
+          reader.AddPosition(4);
 
         diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
 
@@ -373,9 +407,9 @@ namespace diesel {
         this->_headers.push_back(header_vector);
         this->_archives.insert({ header_vector, headerData });
 
-        reader.ReadType<uint32_t>(); // dsl::Bundle typeid (0x94C51F19)
+        assert(reader.ReadType<uint32_t>() == 0x94C51F19); // dsl::Bundle typeid (0x94C51F19)
 
-        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
+        if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
           ///
           /// RAID: World War II multiplies unk1_size by 2, then does a for loop reading that number of uint32t's, for some reason.
           ///
@@ -553,16 +587,6 @@ namespace diesel {
         delete header;
       }
       _archives.clear();
-
-      for (auto header : this->_pdth_headers) {
-        delete header;
-      }
-      for (auto header : this->_raid_stream_init_headers) {
-        delete header;
-      }
-      for (auto header : this->_raid_stream_default_headers) {
-        delete header;
-      }
     }
 
     bool Bundle::open(Reader& outReader, unsigned int dbKey) { // dsl::Bundle::open from PAYDAY: The Heist v1 and RAID: World War II (Function signature as of U24.4: "\x48\x89\x5C\x24\x00\x55\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x81\xEC\x00\x00\x00\x00\x41\x8B\xD8" "xxxx?xxxxxxxxxxxxxx????xxx")
@@ -581,7 +605,7 @@ namespace diesel {
             fileReader.SetPosition(pair.second.offset);
             fileReader.SetReplacementSize(pair.second.size);
 
-            if (engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) {
+            if ((engineVersion.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || engineVersion.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) && this->_raid_uncompressed_sizes.contains(dbKey)) {
               unsigned int compressedSize = pair.second.size;
               char* compressed = new char[compressedSize];
               fileReader.ReadBytesToBuffer(compressed, compressedSize);
@@ -673,7 +697,13 @@ namespace diesel {
     }
 
     bool BundleDatabase::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
+      if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE)
+        reader.AddPosition(4);
+
       auto _properties = SortMap<Idstring, unsigned int>(reader, version);
+
+      if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE)
+        reader.AddPosition(20);
       auto _lookup = SortMap<DBExtKey, unsigned int>(reader, version);
 
       reader.SetPosition(_properties._data._data);
