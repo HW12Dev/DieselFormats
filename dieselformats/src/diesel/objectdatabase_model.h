@@ -284,6 +284,43 @@ namespace diesel {
         Topology* _topology;
       };
 
+      class Bones : public PersistentObject {
+      public:
+        class BoneMapping {
+        public:
+          std::vector<std::vector<int>> _bone_sets;
+          std::vector<std::vector<Matrix4>> _matrix_sets;
+        };
+      public:
+        virtual void load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters) override;
+        //PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(Bones);
+
+      public:
+        BoneMapping _default_bone_mapping;
+      };
+
+      class Version {
+      public:
+        unsigned int _v;
+      };
+
+      class SkinBones : public Bones {
+      public:
+        virtual void load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters) override;
+        PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(SkinBones);
+
+      private:
+      public:
+        Object3D* _root_node;
+        std::vector<Object3D*> _bone_nodes;
+
+        std::vector<Matrix4> _premul_tms;
+        std::vector<Matrix4> _bone_transforms;
+        std::vector<Version> _versions;
+
+        Matrix4 _postmul_tms;
+      };
+
     }
   }
 }

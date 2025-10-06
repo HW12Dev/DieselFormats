@@ -102,6 +102,9 @@ namespace diesel {
       if (typeId == typeids::PassThroughGP)
         return new PassThroughGP();
 
+      if (typeId == typeids::SkinBones)
+        return new SkinBones();
+
       if (typeId == typeids::D3DShaderLibraryData)
         return new D3DShaderLibraryData();
       if (typeId == typeids::D3DShaderData)
@@ -159,6 +162,7 @@ namespace diesel {
 #pragma region Persistent Object Classes
 
 diesel::objectdatabase::typeidclasses::PersistentObject::PersistentObject() {
+  _name = diesel::modern::Idstring("");
 }
 
 diesel::objectdatabase::typeidclasses::PersistentObject::~PersistentObject() {

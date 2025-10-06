@@ -122,7 +122,7 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::load(Reader& read
     auto dx9_block_first = (int32_t)0;
     auto dx11_block_first = diesel::modern::Idstring();
 
-    if (loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10) {
+    if (loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10 || loadParameters.renderer == Renderer::PLAYSTATION4) {
       if (loadParameters.version <= EngineVersion::LEAD_AND_GOLD) {
         std::string str = reader.ReadString();
         dx11_block_first = diesel::modern::Idstring(str);
@@ -159,7 +159,7 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::load(Reader& read
       block.states.emplace_back(std::make_pair(state_first, state));
     }
 
-    if(loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10)
+    if(loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10 || loadParameters.renderer == Renderer::PLAYSTATION4)
       this->_dx11_sampler_state_blocks.emplace_back(std::make_pair(dx11_block_first, block));
     else
       this->_dx9_sampler_state_blocks.emplace_back(std::make_pair(dx9_block_first, block));

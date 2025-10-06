@@ -231,6 +231,48 @@ void diesel::objectdatabase::typeidclasses::PassThroughGP::load(Reader& reader, 
   ref_map.load_ref(topology_refid, &this->_topology);
 }
 
+void diesel::objectdatabase::typeidclasses::Bones::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
+{
+  auto num_sets = reader.ReadType<uint32_t>();
+
+  for (int i = 0; i < num_sets; i++) {
+    auto num_bones = reader.ReadType<uint32_t>();
+
+    auto& bones = this->_default_bone_mapping._bone_sets.emplace_back(std::vector<int>());
+
+    for(int j = 0; j < num_bones; j++) {
+      bones.push_back(reader.ReadType<int>());
+    }
+  }
+}
+
+void diesel::objectdatabase::typeidclasses::SkinBones::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
+{
+  Bones::load(reader, ref_map, loadParameters);
+
+  auto root_node_refid = reader.ReadType<RefId>();
+
+  ref_map.load_ref(root_node_refid, &this->_root_node);
+
+
+  auto bone_nodes_size = reader.ReadType<uint32_t>();
+  this->_bone_nodes.resize(bone_nodes_size);
+  for (int i = 0; i < bone_nodes_size; i++) {
+    auto bone_node = reader.ReadType<RefId>();
+    ref_map.load_ref(bone_node, &this->_bone_nodes[i]);
+  }
+
+
+  for (int i = 0; i < bone_nodes_size; i++) {
+    this->_premul_tms.push_back(reader.ReadType<Matrix4>());
+    this->_bone_transforms.push_back(reader.ReadType<Matrix4>());
+  }
+
+  this->_postmul_tms = reader.ReadType<Matrix4>();
+
+
+}
+
 
 /*enum class ChannelType : int32_t {
   CT_UNINITIALIZED = 0x0,
@@ -277,3 +319,4 @@ int diesel::objectdatabase::typeidclasses::model::GetSizeForChannelType(GenericC
 
   return channel_size[(int32_t)channelType];
 }
+

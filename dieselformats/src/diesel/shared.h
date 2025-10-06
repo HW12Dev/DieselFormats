@@ -58,6 +58,7 @@ namespace diesel {
     DIRECTX11,
     OPENGL,
     PLAYSTATION3, // Cell + RSX
+    PLAYSTATION4,
 
     XBOX360 = DIRECTX9,
   };
