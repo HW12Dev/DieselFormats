@@ -4,9 +4,11 @@
 #pragma comment(lib, "DieselFormats.lib")*/
 
 extern "C" { // hacky way to avoid needing to link against zlib.lib, shouldn't cause any problems since it doesn't get called for Idstring lookups
-  int inflate(void* strm, int flush) {}
-  int inflateEnd(void* strm) {}
-  int inflateInit2_(void* strm, int windowBits, const char* version, int stream_size) {};
+  int inflate() {}
+  int inflateEnd() {}
+  int inflateInit_() {};
+  int inflateInit2_() {};
+  int compress2() {}
 }
 
 #include <diesel/modern/hash.h>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="DieselVisualiserVSIX.b8bc014b-15bd-4b70-84d0-427d1fecd5c9" Version="1.1" Language="en-US" Publisher="HW12Dev" />
+        <Identity Id="DieselVisualiserVSIX.b8bc014b-15bd-4b70-84d0-427d1fecd5c9" Version="1.2" Language="en-US" Publisher="HW12Dev" />
         <DisplayName>DieselVisualiserVSIX</DisplayName>
         <Description xml:space="preserve">Extension to provide functionality while debugging diesel applications.</Description>
         <Preview>true</Preview>
