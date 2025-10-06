@@ -5,27 +5,17 @@
 #include <cassert>
 
 
-unsigned int diesel::objectdatabase::typeidclasses::model::channel_size[diesel::objectdatabase::typeidclasses::model::ChannelType::CT_COUNT] = {
-  0,
-  4,
-  8,
-  0x0C,
-  0x10,
-  4,
-  4,
-  8,
-  0xC,
-};
-
 using namespace diesel::objectdatabase::typeidclasses::model;
 
 void diesel::objectdatabase::typeidclasses::Model::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters) { // dsl::Model::load from PAYDAY 2 Linux/PDTH v1/Lead and Gold/Ballistics decomp/RAID decomp
   Object3D::load(reader, ref_map, loadParameters);
 
-  auto type = reader.ReadType<uint32_t>();
+  auto primitive_type = (RenderAtom::PrimitiveType)reader.ReadType<uint32_t>();
 
-  if (type == 6) { // present in pd2 linux + raid
-    // TODO: extra information is stored when this condition is true
+  if (primitive_type == 6) { // present in pd2 linux + raid
+    
+    this->_bounding_volume = reader.ReadType<BoundingVolume>();
+
     return;
   }
 
@@ -47,6 +37,10 @@ void diesel::objectdatabase::typeidclasses::Model::load(Reader& reader, Referenc
     atom.primitives = reader.ReadType<uint32_t>();
     atom.index_offset = reader.ReadType<uint32_t>();
     atom.vertices = reader.ReadType<uint32_t>();
+
+    atom.primitive_type = primitive_type;
+
+    auto material_id = reader.ReadType<uint32_t>();
 
 
     if (geometryproducer_refid) {
@@ -93,7 +87,7 @@ void diesel::objectdatabase::typeidclasses::Animatable::load(Reader& reader, Ref
     reader.ReadType<uint32_t>();
   }
 
-  reader.AddPosition(8);
+  //reader.AddPosition(8);
 }
 
 void diesel::objectdatabase::typeidclasses::Object3D::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
@@ -173,18 +167,27 @@ void diesel::objectdatabase::typeidclasses::Geometry::load(Reader& reader, Refer
 
   int offset = 0;
   for (int i = 0; i < channel_count; i++) {
-    auto type = reader.ReadType<ChannelType>();
-    auto component = reader.ReadType<VertexComponent>();
+    auto channelType = reader.ReadType<GenericChannelType>();
 
-    this->_format.push_back(GeometryProducerChannelDesc{ .type = type, .component = component });
+    auto component = reader.ReadType<GenericVertexComponent>();
+
+    if (loadParameters.version != diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST && component > GenericVertexComponent::VC_TEXCOORD7) {
+      component = (GenericVertexComponent)((int32_t)component + 2); // shift everything over to fix the misalignment created by TEXCOORDs 8 and 9
+    }
+
+    if (loadParameters.version != diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST && channelType > GenericChannelType::CT_NORMPACKED3) {
+      channelType = GenericChannelType::CT_COUNT; // adjust values in versions where half floats don't exist to be CT_COUNT
+    }
+
+    this->_format.push_back(GeometryProducerChannelDesc{ .type = channelType, .component = component});
 
     this->_channel_offset.push_back(offset);
 
-    assert(type != ChannelType::CT_UNINITIALIZED);
+    auto channel_size = GetSizeForChannelType(channelType, loadParameters);
 
-    this->_vertex_size += channel_size[type];
+    this->_vertex_size += channel_size;
 
-    offset += channel_size[type];
+    offset += channel_size;
   }
 
   this->_vertices = new char[this->_vertex_size * _size];
@@ -196,7 +199,7 @@ void diesel::objectdatabase::typeidclasses::Geometry::load(Reader& reader, Refer
 
 void diesel::objectdatabase::typeidclasses::Topology::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
 {
-  this->_type = reader.ReadType<IndexProducer::Type>();
+  this->_type = (IndexProducer::IndexProducerType)reader.ReadType<uint32_t>();
 
   auto _num_indices = reader.ReadType<uint32_t>();
 
@@ -228,3 +231,49 @@ void diesel::objectdatabase::typeidclasses::PassThroughGP::load(Reader& reader, 
   ref_map.load_ref(topology_refid, &this->_topology);
 }
 
+
+/*enum class ChannelType : int32_t {
+  CT_UNINITIALIZED = 0x0,
+  CT_FLOAT1,
+  CT_FLOAT2,
+  CT_FLOAT3,
+  CT_FLOAT4,
+  CT_UBYTE4,
+  CT_SHORT2,
+  CT_SHORT4,
+  CT_NORMPACKED3,
+  CT_COUNT,
+};
+enum class ChannelTypeRaid : int32_t {
+  CT_UNINITIALIZED = 0x0,
+  CT_FLOAT1,
+  CT_FLOAT2,
+  CT_FLOAT3,
+  CT_FLOAT4,
+  CT_UBYTE4,
+  CT_SHORT2,
+  CT_SHORT4,
+  CT_NORMPACKED3,
+
+  CT_HALFFLOAT, // RAID adds 2 byte half floats
+
+  CT_COUNT,
+};*/
+
+
+int diesel::objectdatabase::typeidclasses::model::GetSizeForChannelType(GenericChannelType channelType, const diesel::DieselFormatsLoadingParameters& loadParameters) {
+  static int channel_size[(int)GenericChannelType::CT_COUNT] = {
+    0,
+    4,
+    8,
+    0x0C,
+    0x10,
+    4,
+    4,
+    8,
+    4, // HALF FLOAT
+    4,
+  };
+
+  return channel_size[(int32_t)channelType];
+}
