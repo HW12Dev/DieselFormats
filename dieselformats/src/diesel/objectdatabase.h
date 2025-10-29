@@ -85,6 +85,7 @@ namespace diesel {
     }
 
     class ReferenceMap;
+    class SavingReferenceMap;
 
     namespace typeidclasses {
       class PersistentObject {
@@ -93,7 +94,9 @@ namespace diesel {
         virtual ~PersistentObject();
       public:
         virtual void load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters);
+        virtual void save(Writer& writer, SavingReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters);
         PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(PersistentObject);
+        virtual void post_load(); // Not from diesel
 
         const diesel::modern::Idstring& get_name() const { return this->_name; } // Not from diesel
 
@@ -112,6 +115,7 @@ namespace diesel {
       template<typename T>
       void load_ref(RefId ref_id, T** ptr)
       {
+        //if (ref_id == 1063456128)__debugbreak();
         referencesToFulfill.push_back({ ref_id, (typeidclasses::PersistentObject**)ptr });
       }
 
@@ -126,13 +130,28 @@ namespace diesel {
       std::vector<std::pair<RefId, typeidclasses::PersistentObject**>> referencesToFulfill;
     };
 
+    class SavingReferenceMap {
+    public:
+      void WriteRef(Writer& writer, typeidclasses::PersistentObject* obj) { this->referencesToWrite.push_back(std::make_pair(writer.GetPosition(), obj)); writer.WriteType<uint32_t>(0); }
+    public:
+      void AddRef(typeidclasses::PersistentObject* obj, RefId refId) { objectRefids.insert(std::make_pair(obj, refId)); }
+
+      void WriteReferences(Writer& writer);
+
+    private:
+      std::map<typeidclasses::PersistentObject*, RefId> objectRefids;
+      std::vector<std::pair<size_t, typeidclasses::PersistentObject*>> referencesToWrite;
+    };
+
     class ObjectDatabase {
     public:
       ObjectDatabase(Reader& reader, const diesel::DieselFormatsLoadingParameters& loadParameters);
       ~ObjectDatabase();
 
+      bool Write(Writer& writer, const diesel::DieselFormatsLoadingParameters& loadParameters);
 
-      std::vector<typeidclasses::PersistentObject*>& GetObjects();
+      std::vector<typeidclasses::PersistentObject*>& GetObjects() { return _object_list; }
+      const std::vector<typeidclasses::PersistentObject*>& GetObjects() const { return _object_list; }
     private:
       std::vector<typeidclasses::PersistentObject*> _object_list;
     };

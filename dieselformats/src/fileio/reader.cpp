@@ -15,6 +15,8 @@ FileReaderContainer::FileReaderContainer(const std::filesystem::path& path) {
 
   this->file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
+  this->sourcePath = path;
+
   if (this->file == INVALID_HANDLE_VALUE) {
     throw std::runtime_error("File: " + path.string() + " does not exist.");
   }
@@ -49,7 +51,7 @@ unsigned long long FileReaderContainer::ReadBytesToBuffer(char* outBuffer, std::
   //overlapped.OffsetHigh = HIWORD(this->position);
 
   if (size + position > this->GetFileSize()) {
-    throw std::runtime_error("FileReaderContainer read beyond its size");
+    throw std::runtime_error("FileReaderContainer read beyond its size (" + this->sourcePath.string() + ")");
     return 0;
   }
 

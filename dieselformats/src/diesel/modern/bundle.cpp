@@ -110,7 +110,8 @@ namespace diesel {
         reader.SetPosition(start + size + 4);
       }
 
-      assert(reader.ReadType<uint32_t>() == TypeId_BundleHeader); // header typeid (TypeId_BundleHeader)
+      uint32_t ShouldBeBundleHeader = reader.ReadType<uint32_t>();
+      assert(ShouldBeBundleHeader == TypeId_BundleHeader); // header typeid (TypeId_BundleHeader)
 
       start = reader.GetPosition();
 
@@ -139,8 +140,9 @@ namespace diesel {
       else if(version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
         reader.SetPosition(start + size + 4);
       }
-
-      assert(reader.ReadType<uint32_t>() == TypeId_PackageBundle); // resources typeid (TypeId_PackageBundle)
+      
+      uint32_t ShouldBePackageBundle = reader.ReadType<uint32_t>();
+      assert(ShouldBePackageBundle == TypeId_PackageBundle); // resources typeid (TypeId_PackageBundle)
 
       if (reader.AtEndOfBuffer())
         return;
@@ -340,7 +342,7 @@ namespace diesel {
         }
       }
       else if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
-        for (int i = 0; i < NUM_BUNDLES; i++) {
+        for (int i = 0; i < NUM_BUNDLES + 10; i++) {
           for(auto& bundleType : {"init", "default"}) {
             auto path = basePath / (std::string("stream_") + bundleType + "_" + std::to_string(i) + "_h.bundle");
 
@@ -407,7 +409,8 @@ namespace diesel {
         this->_headers.push_back(header_vector);
         this->_archives.insert({ header_vector, headerData });
 
-        assert(reader.ReadType<uint32_t>() == 0x94C51F19); // dsl::Bundle typeid (0x94C51F19)
+        uint32_t ShouldBeBundle = reader.ReadType<uint32_t>();
+        assert(ShouldBeBundle == TypeId_Bundle); // dsl::Bundle typeid (0x94C51F19)
 
         if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST || version.version == diesel::EngineVersion::PAYDAY_2_MODERN_CONSOLE) {
           ///
@@ -629,64 +632,6 @@ namespace diesel {
       }
 
       return false;
-
-      /*
-
-      for (int i = 0; i < this->_pdth_headers.size(); i++) {
-        auto header = this->_pdth_headers[i];
-
-        for (int j = 0; j < header->size(); j++) { // the game uses a binary search to index these
-          auto& pair = (*header)[j];
-          if (pair.first == dbKey) {
-            auto filePath = basePath / (name + "_" + std::to_string(i) + ".bundle");
-            if (this->engineVersion.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2) {
-              filePath = basePath / (name + ".bundle");
-            }
-
-            outReader = Reader(filePath);
-            outReader.SetPosition(pair.second.offset);
-            outReader.SetReplacementSize(pair.second.size);
-
-            return true;
-          }
-        }
-      }
-
-      for (int i = 0; i < this->_raid_stream_default_headers.size() + this->_raid_stream_init_headers.size(); i++) { // RAID: World War II is assumed
-        // Horrifying loop to make use of both lists in one block of code.
-
-        bool isDefault = i < this->_raid_stream_default_headers.size();
-
-        int bundleIndex = isDefault ? i : i - this->_raid_stream_default_headers.size();
-
-        auto header = isDefault ? this->_raid_stream_default_headers[bundleIndex] : this->_raid_stream_init_headers[bundleIndex];
-
-        for (int j = 0; j < header->size(); j++) {
-          auto& pair = (*header)[j];
-          if (pair.first == dbKey) {
-
-            auto filePath = basePath / (std::string("stream_") + (isDefault ? "default" : "init") + "_" + std::to_string(bundleIndex) + ".bundle");
-
-            Reader bundleReader(filePath);
-            bundleReader.SetPosition(pair.second.offset);
-            bundleReader.SetReplacementSize(pair.second.size);
-
-            char* compressed = new char[pair.second.size];
-            bundleReader.ReadBytesToBuffer(compressed, pair.second.size);
-
-            unsigned int uncompressedSize = this->_raid_uncompressed_sizes[dbKey];
-            char* uncompressed = new char[uncompressedSize];
-
-            compression::ZlibDecompression::DecompressBuffer(compressed, pair.second.size, uncompressed, uncompressedSize);
-
-            outReader = Reader(uncompressed, uncompressedSize);
-            delete[] compressed;
-          }
-        }
-      }
-      return false;
-
-      */
     }
 
 #pragma endregion

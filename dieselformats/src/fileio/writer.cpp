@@ -86,8 +86,8 @@ void Writer::SetSwapEndianness(bool swap) {
   this->swapEndiannessOfIntegers = swap;
 }
 
-void Writer::WriteBytes(char* inBuffer, std::size_t size) {
-  this->position += this->container->WriteBytes(inBuffer, size, position);
+void Writer::WriteBytes(const char* inBuffer, std::size_t size) {
+  this->position += this->container->WriteBytes((char*)inBuffer, size, position);
 }
 
 void Writer::WriteReader(Reader& reader) {

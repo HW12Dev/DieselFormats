@@ -153,9 +153,17 @@ namespace diesel {
       public:
         virtual void load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters) override;
         PERSISTENTOBJECT_VIRTUAL_FUNCTION_TYPE_ID_AUTOFILL(Object3D);
+        virtual void post_load() override;
+
+      public:
+        const Object3D* get_parent() const { return _parent; }
+        Object3D* get_parent() { return _parent; }
+        const std::vector<Object3D*>& get_children() const { return _children; }
+        const Matrix4& get_local_tm() const { return _local_tm; }
 
       private:
         Object3D* _parent;
+        std::vector<Object3D*> _children; // not from diesel
         Matrix4 _local_tm;
       };
 

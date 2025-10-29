@@ -24,8 +24,9 @@ void diesel::objectdatabase::typeidclasses::Model::load(Reader& reader, Referenc
 
   auto atom_count = reader.ReadType<uint32_t>();
 
+  this->_atoms.resize(atom_count);
   for (int i = 0; i < atom_count; i++) { // TODO: More changes for ballistics support
-    auto& atom = this->_atoms.emplace_back(IndexedRenderAtom());
+    auto& atom = this->_atoms[i];
 
     if (loadParameters.version == EngineVersion::LEAD_AND_GOLD) {
       atom.layer = reader.ReadType<uint32_t>();
@@ -42,10 +43,9 @@ void diesel::objectdatabase::typeidclasses::Model::load(Reader& reader, Referenc
 
     auto material_id = reader.ReadType<uint32_t>();
 
-
     if (geometryproducer_refid) {
-      auto& ref_value = atom.streams.emplace_back(nullptr);
-      ref_map.load_ref(geometryproducer_refid, &ref_value);
+      atom.streams.resize(1);
+      ref_map.load_ref(geometryproducer_refid, &atom.streams[0]);
     }
     if (indexproducer_refid) {
       ref_map.load_ref(indexproducer_refid, &atom.indices);
@@ -103,6 +103,13 @@ void diesel::objectdatabase::typeidclasses::Object3D::load(Reader& reader, Refer
   auto parent_refid = reader.ReadType<RefId>();
   ref_map.load_ref(parent_refid, &this->_parent);
 }
+void diesel::objectdatabase::typeidclasses::Object3D::post_load()
+{
+  Animatable::post_load();
+  if (_parent) {
+    _parent->_children.push_back(this);
+  }
+}
 
 void diesel::objectdatabase::typeidclasses::Material::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
 {
@@ -126,6 +133,7 @@ void diesel::objectdatabase::typeidclasses::MaterialGroup::load(Reader& reader, 
 {
   auto material_count = reader.ReadType<uint32_t>();
 
+  this->_materials.reserve(material_count);
   for (int i = 0; i < material_count; i++) {
     auto refid = reader.ReadType<RefId>();
 
@@ -144,12 +152,11 @@ void diesel::objectdatabase::typeidclasses::AnimationData::load(Reader& reader, 
   this->end_time = reader.ReadType<float>();
 
   auto animatable_count = reader.ReadType<uint32_t>();
+  this->_animatable_list.resize(animatable_count);
   for (int i = 0; i < animatable_count; i++) {
     auto animatable_refid = reader.ReadType<RefId>();
 
-    auto& ref_value = this->_animatable_list.emplace_back(nullptr);
-
-    ref_map.load_ref(animatable_refid, &ref_value);
+    ref_map.load_ref(animatable_refid, &_animatable_list[i]);
   }
 }
 

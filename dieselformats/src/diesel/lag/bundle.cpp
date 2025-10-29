@@ -53,7 +53,7 @@ namespace diesel {
         }
       }
       else if (this->header.version == 1) {
-
+        throw std::runtime_error("Bundle with header version 1, please contact the tool developer.");
       }
     }
 

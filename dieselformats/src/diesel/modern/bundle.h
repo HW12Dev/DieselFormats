@@ -17,6 +17,8 @@ namespace diesel {
     const unsigned int TypeId_PackageBundle = 0x19b7461f;
     const unsigned int TypeId_BundleHeader = 0xebfcc5f8;
 
+    const unsigned int TypeId_Bundle = 0x94C51F19;
+
 
     struct DBExtKey {
       Idstring _type;

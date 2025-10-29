@@ -52,6 +52,7 @@ public:
 
 protected:
   HANDLE file;
+  std::filesystem::path sourcePath;
 };
 
 class Reader {

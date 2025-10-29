@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
       packages << "@" << diesel::modern::GetGlobalHashlist()->GetIdstringSource(idstringName) << "\n";
 
       Reader reader1(i->path());
-      diesel::modern::blobtypes::PackageBundle package(i->path(), reader1, engineVersion);
+      diesel::modern::PackageBundle package(i->path(), reader1, engineVersion);
       reader1.Close();
 
       for (auto& resource : package.GetResources()) {

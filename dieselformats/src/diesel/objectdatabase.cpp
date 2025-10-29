@@ -49,18 +49,62 @@ namespace diesel {
       }
 
       ref_map.AssignAllReferences();
+
+      for (diesel::objectdatabase::typeidclasses::PersistentObject* object : _object_list) {
+        object->post_load();
+      }
     }
 
+    bool ObjectDatabase::Write(Writer& writer, const diesel::DieselFormatsLoadingParameters& loadParameters) {
+
+      writer.WriteType<uint32_t>(-1);
+
+      size_t fileSizePosition = writer.GetPosition();
+      writer.WriteType<uint32_t>(0);
+
+      writer.WriteType<uint32_t>((uint32_t)this->_object_list.size());
+
+      SavingReferenceMap ref_map;
+
+      for (unsigned int i = 0; i < (unsigned int)this->_object_list.size(); i++) {
+        diesel::objectdatabase::typeidclasses::PersistentObject* obj = this->_object_list[i];
+
+        writer.WriteType<TypeId>(obj->type_id());
+
+        ref_map.WriteRef(writer, obj);
+        ref_map.AddRef(obj, i + 1);
+
+        size_t writeObjectSizePosition = writer.GetPosition();
+        writer.WriteType<uint32_t>(0);
+
+        obj->save(writer, ref_map, loadParameters);
+
+        size_t objectSize = writer.GetPosition() - writeObjectSizePosition - 4;
+
+        size_t nextObjectStartPos = writer.GetPosition();
+
+        writer.SetPosition(writeObjectSizePosition);
+        writer.WriteType<uint32_t>((uint32_t)objectSize);
+        writer.SetPosition(nextObjectStartPos);
+
+      }
+
+      size_t fileSize = writer.GetPosition();
+      writer.SetPosition(fileSizePosition);
+      writer.WriteType<uint32_t>((uint32_t)fileSize);
+
+      ref_map.WriteReferences(writer);
+
+      writer.SetPosition(fileSize);
+
+      return true;
+    }
 
 
     ObjectDatabase::~ObjectDatabase() {
       for (auto object : this->_object_list) {
         delete object;
       }
-    }
-
-    std::vector<typeidclasses::PersistentObject*>& ObjectDatabase::GetObjects() {
-      return this->_object_list;
     }
 
 #define REGISTER_TYPEID(clazz, clazzTypeId)
@@ -156,21 +200,29 @@ namespace diesel {
     }
 
 #undef TYPE_ID_ENTRY
-  }
+    void SavingReferenceMap::WriteReferences(Writer& writer)
+    {
+      for (auto& reference : referencesToWrite) {
+        if (!this->objectRefids.contains(reference.second))
+          continue;
+        writer.SetPosition(reference.first);
+        writer.WriteType<RefId>(this->objectRefids[reference.second]);
+      }
+    }
+}
 }
 
 #pragma region Persistent Object Classes
 
 diesel::objectdatabase::typeidclasses::PersistentObject::PersistentObject() {
-  _name = diesel::modern::Idstring("");
+  _name = diesel::modern::Idstring(-1);
 }
 
 diesel::objectdatabase::typeidclasses::PersistentObject::~PersistentObject() {
 }
 
 void diesel::objectdatabase::typeidclasses::PersistentObject::load(Reader& reader, ReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters) {
-  auto isIdstring = loadParameters.version > diesel::EngineVersion::MODERN_VERSION_START;
-  if (isIdstring) {
+  if (diesel::DoLoadParametersHaveIdstrings(loadParameters)) {
     this->_name = reader.ReadType<uint64_t>();
   }
   else {
@@ -181,5 +233,19 @@ void diesel::objectdatabase::typeidclasses::PersistentObject::load(Reader& reade
   }
 }
 
+void diesel::objectdatabase::typeidclasses::PersistentObject::save(Writer& writer, SavingReferenceMap& ref_map, const DieselFormatsLoadingParameters& loadParameters)
+{
+  if (_name == diesel::modern::Idstring(-1ull)) // if name wasn't read
+    return;
+
+  if (diesel::DoLoadParametersHaveIdstrings(loadParameters)) {
+    writer.WriteType<uint64_t>(this->_name);
+  }
+  else {
+    writer.WriteString(diesel::modern::GetGlobalHashlist()->GetIdstringSource(this->_name));
+  }
+}
+
+void diesel::objectdatabase::typeidclasses::PersistentObject::post_load() {}
 
 #pragma endregion

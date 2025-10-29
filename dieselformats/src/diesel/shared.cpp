@@ -61,9 +61,10 @@ namespace diesel {
 
   std::string ReplaceInString(std::string str, const std::string& find, const std::string& replace)
   {
-    size_t findInStr = std::string::npos;
-    while (findInStr = str.find(find), findInStr != std::string::npos) {
+    size_t findInStr = 0;
+    while (findInStr = str.find(find, findInStr), findInStr != std::string::npos) {
       str.replace(findInStr, find.size(), replace);
+      findInStr += replace.size();
     }
 
     return str;
@@ -71,7 +72,7 @@ namespace diesel {
 
   std::wstring ReplaceInString(std::wstring str, const std::wstring& find, const std::wstring& replace)
   {
-    size_t findInStr = std::wstring::npos;
+    size_t findInStr = 0;
     while (findInStr = str.find(find), findInStr != std::wstring::npos) {
       str.replace(findInStr, find.size(), replace);
     }

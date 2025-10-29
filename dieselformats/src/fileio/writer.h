@@ -51,7 +51,9 @@ public:
 
   void SetSwapEndianness(bool swap);
 
-  void WriteBytes(char* inBuffer, std::size_t size);
+  void WriteString(const std::string& str) { WriteBytes(str.data(), str.size() + 1); }
+
+  void WriteBytes(const char* inBuffer, std::size_t size);
 
   // write the remaining contents of a reader object
   void WriteReader(Reader& reader);
