@@ -247,7 +247,7 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::save(Writer& writ
       writer.WriteType<uint32_t>(this->_dx9_sampler_state_blocks[i].first);
     }
 
-    const D3DStateBlock& block = ((loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10 || loadParameters.renderer == Renderer::PLAYSTATION4)) ? this->_dx11_sampler_state_blocks[i].second : this->_dx9_sampler_state_blocks[i].second;
+    const D3DStateBlock& block = (loadParameters.renderer == Renderer::DIRECTX11 || loadParameters.renderer == Renderer::DIRECTX10 || loadParameters.renderer == Renderer::PLAYSTATION4) ? this->_dx11_sampler_state_blocks[i].second : this->_dx9_sampler_state_blocks[i].second;
 
     if (loadParameters.renderer == Renderer::OPENGL) {
       writer.WriteString(block.sampler_block_name_ogl);
@@ -270,6 +270,7 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::save(Writer& writ
 void diesel::objectdatabase::typeidclasses::D3DShaderPassData::SetVertexShader(const char* source, size_t sourceSize) {
   if (this->_compiled_vertex_shader) {
     delete[] this->_compiled_vertex_shader;
+    this->_compiled_vertex_shader_size = 0;
   }
   if (source) {
     this->_compiled_vertex_shader = new char[sourceSize];
@@ -281,6 +282,7 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::SetVertexShader(c
 void diesel::objectdatabase::typeidclasses::D3DShaderPassData::SetPixelShader(const char* source, size_t sourceSize) {
   if (this->_compiled_pixel_shader) {
     delete[] this->_compiled_pixel_shader;
+    this->_compiled_pixel_shader_size = 0;
   }
   if (source) {
     this->_compiled_pixel_shader = new char[sourceSize];

@@ -10,4 +10,27 @@
       <Item Name="[index]">valueindex()</Item>
     </Expand>
   </Type>
+  <Type Name="diesel::modern::SaveGame::InformationData::SerializerVariant">
+
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_NIL">nil</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_STRING">{stringValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_NUMBER">{floatValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_ZERO">0</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_INT8">{(uint8_t)intValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_INT16">{(uint16_t)intValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_BOOLEAN">{(bool)intValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_TABLE">{tableValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_SCRIPTVALUE">{scriptValue}</DisplayString>
+
+    <Expand>
+      <ExpandedItem Condition="type == diesel::modern::SaveGame::InformationData::SerializerTypeId::_TYPE_ID_TABLE">tableValue,view(simple)</ExpandedItem>
+    </Expand>
+    
+  </Type>
+
+  <Type Name="diesel::modern::SaveGame::InformationData::SerializerScriptValueVariant">
+    <DisplayString Condition="type == diesel::modern::ScriptValueTypeId::ScriptVector3">{vector3Value}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::ScriptValueTypeId::ScriptQuaternion">{quaternionValue}</DisplayString>
+    <DisplayString Condition="type == diesel::modern::ScriptValueTypeId::ScriptIdstring">{idstringValue}</DisplayString>
+  </Type>
 </AutoVisualizer>

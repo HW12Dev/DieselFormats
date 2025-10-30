@@ -236,6 +236,37 @@ void Reader::ReadCompressedDataStore(Reader& outReader) {
   outReader = Reader(uncompressed, uncompressedTotalSize);
 }
 
+void Reader::ReadWithXORKey(Reader& outReader, const char* key, size_t keyLength) {
+  auto fileSize = this->GetFileSize();
+  char* data = new char[fileSize];
+  this->ReadBytesToBuffer(data, fileSize);
+
+  int keyIndex = 0;
+
+  for (int i = 0; i < fileSize; i++) {
+    data[i] = data[i] ^ (char)key[keyIndex % keyLength];
+    keyIndex++;
+  }
+
+  outReader = Reader(data, fileSize);
+}
+
+void Reader::ReadWithXORKeyTransformInPlace(Reader& outReader, const char* key, size_t keyLength)
+{
+  auto fileSize = this->GetFileSize();
+  char* data = new char[fileSize];
+  this->ReadBytesToBuffer(data, fileSize);
+
+  int keyIndex = 0;
+
+  for (int i = 0; i < fileSize; i++) {
+    int keyIndex = ((fileSize + i) * 7) % keyLength;
+    data[i] = data[i] ^ (char)(key[keyIndex] * (fileSize - i));
+  }
+
+  outReader = Reader(data, fileSize);
+}
+
 ///
 /// BANDITS - Phoenix Rising contains a .enc format used to store certain DieselScript and XML files ({original_extension}.enc)
 /// 
@@ -253,33 +284,18 @@ void Reader::ReadCompressedDataStore(Reader& outReader) {
 /// For those wishing to have BANDITS use your non-encrypted, edited files instead of the encrypted ones: BANDITS will load any file instead of the encrypted version if the filename is the same, but without ".enc" at the end.
 ///
 
-// Really an array of chars, making it an array of ints removes compiler warnings
-int BANDITSXorEncryptionKey[] = { 0xDE, 0x5E, 0xDA, 0x07,
-                  0xBB, 0x96, 0x42, 0x40,
-                  0xB4, 0xEB, 0x64, 0xAD,
-                  0x6D, 0x8C, 0x24, 0x40,
-                  0x83, 0xEB, 0x3B, 0x3D,
-                  0xD6, 0x16, 0x1E, 0x97,
-                  0xB5, 0x70, 0x79, 0xD9,
-                  0x04, 0xED, 0x2B, 0x7E,
+char BANDITSXorEncryptionKey[] = { (char)0xDE, (char)0x5E, (char)0xDA, (char)0x07,
+                  (char)0xBB, (char)0x96, (char)0x42, (char)0x40,
+                  (char)0xB4, (char)0xEB, (char)0x64, (char)0xAD,
+                  (char)0x6D, (char)0x8C, (char)0x24, (char)0x40,
+                  (char)0x83, (char)0xEB, (char)0x3B, (char)0x3D,
+                  (char)0xD6, (char)0x16, (char)0x1E, (char)0x97,
+                  (char)0xB5, (char)0x70, (char)0x79, (char)0xD9,
+                  (char)0x04, (char)0xED, (char)0x2B, (char)0x7E,
 };
 
 void Reader::ReadBANDITSEncryptedFile(Reader& outReader) {
-  auto fileSize = this->GetFileSize();
-  char* data = new char[fileSize];
-  this->ReadBytesToBuffer(data, fileSize);
-
-  int keyIndex = 0;
-
-  for (int i = 0; i < fileSize; i++) {
-    data[i] = data[i] ^ (char)BANDITSXorEncryptionKey[keyIndex];
-
-    keyIndex++;
-    if (keyIndex >= 32) // could probably be: "data[i] ^ BANDITSXorEncryptionKey[keyIndex % sizeof(encryptionKey)]" instead of this
-      keyIndex = 0;
-  }
-
-  outReader = Reader(data, fileSize);
+  return ReadWithXORKey(outReader, BANDITSXorEncryptionKey, sizeof(BANDITSXorEncryptionKey));
 }
 
 bool Reader::Valid() const

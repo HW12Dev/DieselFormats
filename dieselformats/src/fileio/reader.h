@@ -116,6 +116,9 @@ public:
   /// <param name="outReader"></param>
   void ReadCompressedDataStore(Reader& outReader);
 
+  void ReadWithXORKey(Reader& outReader, const char* key, size_t keyLength);
+  void ReadWithXORKeyTransformInPlace(Reader& outReader, const char* key, size_t keyLength);
+
   /// <summary>
   /// Read's a BANDITS - Phoenix Rising .enc file to the provided buffer.
   /// This does not include a null terminator.
