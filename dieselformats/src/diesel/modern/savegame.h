@@ -45,6 +45,7 @@ namespace diesel {
           bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
 
         private:
+        public:
             Vector3 vector3Value;
             Quaternion quaternionValue;
             Idstring idstringValue;
@@ -60,7 +61,31 @@ namespace diesel {
         public:
           bool operator<(const SerializerVariant& other) const;
         private:
+        public:
+          SerializerVariant() { type = _TYPE_ID_NIL; intValue = 0; }
+          SerializerVariant(const std::string& str) { type = _TYPE_ID_STRING; stringValue = str; intValue = 0; }
+          SerializerVariant(const bool val) { type = _TYPE_ID_BOOLEAN; intValue = val; }
+          SerializerVariant(const int8_t num) { type = _TYPE_ID_INT8; intValue = num; }
+          SerializerVariant(const int16_t num) { type = _TYPE_ID_INT16; intValue = num; }
+          SerializerVariant(const float num) { type = _TYPE_ID_NUMBER; floatValue = num; }
 
+
+          SerializerVariant& operator[](const char* key) { return tableValue[std::string(key)]; }
+          SerializerVariant& operator[](const std::string& key) { return tableValue[SerializerVariant(key)]; }
+          SerializerVariant& operator[](int8_t key) { return tableValue[SerializerVariant(key)]; }
+          SerializerVariant& operator[](int16_t key) { return tableValue[SerializerVariant(key)]; }
+          SerializerVariant& operator[](float key) { return tableValue[SerializerVariant(key)]; }
+          SerializerVariant& operator[](const SerializerVariant& key) { return tableValue[key]; }
+
+          const SerializerVariant& operator[](const char* key) const { return tableValue.at(std::string(key)); }
+          const SerializerVariant& operator[](const std::string& key) const { return tableValue.at(key); }
+          const SerializerVariant& operator[](int8_t key) const { return tableValue.at(key); }
+          const SerializerVariant& operator[](int16_t key) const { return tableValue.at(key); }
+          const SerializerVariant& operator[](float key) const { return tableValue.at(key); }
+          const SerializerVariant& operator[](const SerializerVariant& key) const { return tableValue.at(key); }
+
+          const std::map<SerializerVariant, SerializerVariant>::const_iterator begin() const { return tableValue.begin(); }
+          const std::map<SerializerVariant, SerializerVariant>::const_iterator end() const { return tableValue.end(); }
 
           SerializerTypeId GetType() const { return type; }
 
@@ -92,6 +117,8 @@ namespace diesel {
       public:
         bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+        const SerializerVariant& GetValue() const { return value; }
+
       private:
         void ReadValue(Reader& reader, const DieselFormatsLoadingParameters& version, SerializerVariant& returnValue);
         void ReadTable(Reader& reader, const DieselFormatsLoadingParameters& version, SerializerVariant& returnTable);
@@ -104,6 +131,9 @@ namespace diesel {
     public:
       // Reads a Diesel save file, input must be the unencrypted file. PAYDAY: The Heist doesn't encrypt save games.
       bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+
+      InformationData& GetInformationData() { return informationData; }
+      const InformationData& GetInformationData() const { return informationData; }
 
     private:
       InformationData informationData;
