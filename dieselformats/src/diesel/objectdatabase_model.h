@@ -13,7 +13,7 @@ namespace diesel {
       namespace model {
         class RenderAtom {
         public:
-          enum PrimitiveType : uint32_t{
+          enum PrimitiveType : uint32_t {
             POINT_LIST = 0,
             LINE_LIST,
             LINE_STRIP,
