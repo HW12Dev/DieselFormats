@@ -45,6 +45,18 @@ namespace diesel {
 
         this->_object_list.push_back(obj);
 
+        obj->refid = ref_id;
+
+        /*long long extra = objectSize - (reader.GetPosition() - objectStartPos);
+        if (extra > 0) {
+          obj->extradata = new char[extra];
+          obj->extradatasize = extra;
+          reader.ReadBytesToBuffer(obj->extradata, extra);
+        }
+        else if (extra < 0) {
+          printf("overread on object %s\n", TypeIdToStr(type_id));
+        }*/
+
         reader.SetPosition(objectStartPos + objectSize);
       }
 

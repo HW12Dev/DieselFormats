@@ -42,6 +42,7 @@ public:
 public:
   void Close();
 
+  void AlignToSize(size_t bytes);
 
   unsigned long long GetPosition() const;
   void SetPosition(unsigned long long pos);

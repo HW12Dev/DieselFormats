@@ -254,8 +254,13 @@ namespace diesel {
       private:
       public: // TODO: REMOVE
         std::vector<model::GeometryProducerChannelDesc> _format;
+
+        // Stride of each vertex data in _vertices
         unsigned int _vertex_size;
+
         std::vector<unsigned int> _channel_offset;
+
+        size_t vertices_size;
         char* _vertices;
       };
       class Topology : public PersistentObject { // class structure from PAYDAY: The Heist v1

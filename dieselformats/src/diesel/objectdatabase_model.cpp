@@ -197,9 +197,11 @@ void diesel::objectdatabase::typeidclasses::Geometry::load(Reader& reader, Refer
     offset += channel_size;
   }
 
-  this->_vertices = new char[this->_vertex_size * _size];
+  this->vertices_size = this->_vertex_size * _size;
 
-  reader.ReadBytesToBuffer(this->_vertices, this->_vertex_size * _size);
+  this->_vertices = new char[vertices_size];
+
+  reader.ReadBytesToBuffer(this->_vertices, vertices_size);
 
   PersistentObject::load(reader, ref_map, loadParameters); // name can be not present (check if the buffer has ended)
 }

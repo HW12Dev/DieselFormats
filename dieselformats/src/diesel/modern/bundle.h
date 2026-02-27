@@ -120,7 +120,7 @@ namespace diesel {
     public:
       void GetFileList(std::vector<ResourceID>& out);
 
-      DBExtKey GetLookupInformationFromDBKey(unsigned int key);
+      const DBExtKey& GetLookupInformationFromDBKey(unsigned int key);
       int GetDBKeyFromTypeAndName(const Idstring& type, const Idstring& name);
 
       const std::vector<std::pair<Idstring, unsigned int>>& GetProperties();

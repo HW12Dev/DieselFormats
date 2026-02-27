@@ -428,161 +428,6 @@ namespace diesel {
         }
       }
 
-      /*
-      if (version.version == diesel::EngineVersion::PAYDAY_THE_HEIST_V1) { // dsl::Bundle::Bundle
-        for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) {
-          auto filePath = basePath / (name + "_" + std::to_string(i_bundle_file) + ".bundle");
-
-          if (!std::filesystem::exists(filePath))
-            continue;
-
-          Reader reader(filePath);
-          reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
-
-          auto header_size = reader.ReadType<uint32_t>();
-
-          diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
-
-          reader.SetPosition(header._data._data + 4);
-
-          HeaderVectorType* header_vector = new HeaderVectorType();
-
-          for (int i = 0; i < header._data._size; i++) {
-            auto key = reader.ReadType<uint32_t>();
-
-            auto offset = reader.ReadType<uint32_t>();
-            auto size = reader.ReadType<uint32_t>();
-
-            header_vector->push_back(std::make_pair(key, diesel::modern::Bundle::BundleEntry{ .offset = offset, .size = size }));
-          }
-
-          this->_pdth_headers.push_back(header_vector);
-
-        }
-      }
-      else if (version.version == diesel::EngineVersion::PAYDAY_2_LEGACY_CONSOLE) {
-        for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) {
-          auto filePath = basePath / (name + "_" + std::to_string(i_bundle_file) + "_h.bundle");
-
-          if (!std::filesystem::exists(filePath))
-            continue;
-
-          Reader rawFileReader(filePath);
-          rawFileReader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
-
-          Reader reader;
-
-          rawFileReader.ReadCompressedDataStore(reader);
-          reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
-
-          auto header_size = reader.ReadType<uint32_t>();
-
-          diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
-
-          reader.SetPosition(header._data._data + 4);
-
-          HeaderVectorType* header_vector = new HeaderVectorType();
-
-          for (int i = 0; i < header._data._size; i++) {
-            auto key = reader.ReadType<uint32_t>();
-
-            auto offset = reader.ReadType<uint32_t>();
-            auto size = reader.ReadType<uint32_t>();
-
-            header_vector->push_back(std::make_pair(key, diesel::modern::Bundle::BundleEntry{ .offset = offset, .size = size }));
-          }
-
-          this->_pdth_headers.push_back(header_vector);
-
-        }
-      }
-      else if (version.version == diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST) { // dsl::Bundle::Bundle from RAID: World War II. Function signature (as of U24.4): "\x4C\x89\x4C\x24\x00\x4C\x89\x44\x24\x00\x48\x89\x54\x24\x00\x48\x89\x4C\x24\x00\x55\x53\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x8D\xAC\x24" "xxxx?xxxx?xxxx?xxxx?xxxxxxxxxxxxxxxx" 
-        // "init" and "default" are the only options
-        
-        // This format is also apparently used on the console versions of PAYDAY 2
-
-        const std::vector<std::string> bundle_types = { "init", "default" };
-
-        for (const std::string& bundle_type : bundle_types) {
-          for (int i_bundle_file = 0; i_bundle_file < 50; i_bundle_file++) { // 50 chosen as pdth uses it
-            auto path = basePath / (std::string("stream_") + bundle_type + "_" + std::to_string(i_bundle_file) + "_h.bundle");
-
-            if (!std::filesystem::exists(path))
-              continue;
-
-            Reader reader;
-            Reader reader2(path);
-            reader2.ReadCompressedDataStore(reader);
-
-            auto header_size = reader.ReadType<uint32_t>();
-            diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
-
-            HeaderVectorType* header_vector = new HeaderVectorType();
-
-
-            reader.SetPosition(header._data._data + 4);
-
-            for (int i = 0; i < header._data._size; i++) {
-              auto key = reader.ReadType<uint32_t>();
-
-              auto offset = reader.ReadType<uint32_t>();
-              auto size = reader.ReadType<uint32_t>();
-
-              header_vector->push_back(std::make_pair(key, diesel::modern::Bundle::BundleEntry{ .offset = offset, .size = size}));
-            }
-
-            reader.ReadType<uint32_t>(); // typeid
-
-            ///
-            /// RAID: World War II multiplies unk1_size by 2, then does a for loop reading that number of uint32t's, for some reason.
-            ///
-            
-            auto unk1_size = reader.ReadType<uint32_t>(); // proper name unknown
-
-            for (int i = 0; i < unk1_size; i++) {
-              auto dbKey = reader.ReadType<uint32_t>();
-              auto uncompressedSize = reader.ReadType<uint32_t>();
-
-              this->_raid_uncompressed_sizes.insert({ dbKey, uncompressedSize });
-            }
-
-            if (bundle_type == "init")
-              this->_raid_stream_init_headers.push_back(header_vector);
-            else if (bundle_type == "default")
-              this->_raid_stream_default_headers.push_back(header_vector);
-            else
-              __debugbreak();
-          }
-        }
-      }
-      else if (version.version == diesel::EngineVersion::BIONIC_COMMANDO_REARMED2) {
-        if(!std::filesystem::exists(basePath / (name + ".bundle")))
-          return;
-
-        Reader reader(basePath / (name + ".bundle"));
-
-        reader.SetSwapEndianness(diesel::AreLoadParametersForABigEndianPlatform(version));
-
-        auto header_size = reader.ReadType<uint32_t>();
-
-        diesel::modern::SortMap<unsigned int, diesel::modern::Bundle::BundleEntry> header(reader, version);
-
-        reader.SetPosition(header._data._data + 4);
-
-        HeaderVectorType* header_vector = new HeaderVectorType();
-
-        for (int i = 0; i < header._data._size; i++) {
-          auto key = reader.ReadType<uint32_t>();
-
-          auto offset = reader.ReadType<uint32_t>();
-          auto size = reader.ReadType<uint32_t>();
-
-          header_vector->push_back(std::make_pair(key, diesel::modern::Bundle::BundleEntry{ .offset = offset, .size = size }));
-        }
-
-        this->_pdth_headers.push_back(header_vector);
-      }
-      */
     }
 
     Bundle::~Bundle() {
@@ -753,13 +598,14 @@ namespace diesel {
         out.push_back(ResourceID{ lookup.first._type, lookup.first._name });
       }
     }
-    DBExtKey BundleDatabase::GetLookupInformationFromDBKey(unsigned int key) {
+    const DBExtKey& BundleDatabase::GetLookupInformationFromDBKey(unsigned int key) {
       for (int i = 0; i < this->_lookup.size(); i++) {
         auto& entry = this->_lookup[i];
         if (entry.second == key)
           return entry.first;
       }
-      return DBExtKey{ ._type = Idstring(-1), ._name = Idstring(-1), ._properties = (unsigned int)-1};
+      static DBExtKey InvalidKey = DBExtKey{ ._type = Idstring(-1), ._name = Idstring(-1), ._properties = (unsigned int)-1};
+      return InvalidKey;
     }
     int BundleDatabase::GetDBKeyFromTypeAndName(const Idstring& type, const Idstring& name) {
       for (int i = 0; i < this->_lookup.size(); i++) {

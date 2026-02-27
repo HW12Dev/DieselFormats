@@ -100,6 +100,11 @@ namespace diesel {
 
         const diesel::modern::Idstring& get_name() const { return this->_name; } // Not from diesel
 
+        char* extradata = nullptr;
+        size_t extradatasize = 0;
+
+        RefId refid;
+
       private:
         diesel::modern::Idstring _name;
       };

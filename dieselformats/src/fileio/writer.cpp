@@ -70,6 +70,12 @@ void Writer::Close() {
     this->container->Close();
 }
 
+void Writer::AlignToSize(size_t bytes) {
+  size_t unalignedPos = GetPosition();
+  unalignedPos += (bytes - unalignedPos % bytes);
+  SetPosition(unalignedPos);
+}
+
 unsigned long long Writer::GetPosition() const {
   return this->position;
 }

@@ -1,10 +1,4 @@
 #include "diesel/lag/bundle.h"
-#include "bundle.h"
-#include "bundle.h"
-#include "bundle.h"
-#include "bundle.h"
-#include "bundle.h"
-#include "bundle.h"
 
 namespace diesel {
   namespace lag {

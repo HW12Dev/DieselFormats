@@ -19,6 +19,20 @@ static const int SAVEGAME_BLOB_COUNT = 7;
 */
 
 bool SaveGame::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
+  if (version.version < diesel::EngineVersion::MODERN_VERSION_START)
+    return read_legacy(reader, version);
+  return read_modern(reader, version);
+}
+
+bool diesel::modern::SaveGame::read_legacy(Reader& reader, const DieselFormatsLoadingParameters& version) {
+  informationData.SetHasVerification(false);
+  informationData.Read(reader, version);
+  return true;
+}
+
+bool diesel::modern::SaveGame::read_modern(Reader& reader, const DieselFormatsLoadingParameters& version) {
+  informationData.SetHasVerification(true);
+
   reader.SetPosition(4);
 
   std::vector<Reader> blobs;
@@ -50,7 +64,8 @@ bool SaveGame::Read(Reader& reader, const DieselFormatsLoadingParameters& versio
 ///
 
 bool SaveGame::InformationData::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
-  reader.SetPosition(4); // only set to 4 if it "has verification"
+  if(hasVerification)
+    reader.SetPosition(4); // only set to 4 if it "has verification"
 
   ReadValue(reader, version, value);
 
@@ -219,12 +234,18 @@ bool diesel::modern::SaveGame::InformationData::SerializerVariant::operator<(con
   else if (this->GetType() >= SerializerTypeId::_TYPE_ID_ZERO && this->GetType() <= SerializerTypeId::_TYPE_ID_BOOLEAN) {
     cmp1 = std::to_string(this->GetInt());
   }
+  else if (this->GetType() == SerializerTypeId::_TYPE_ID_NUMBER) {
+    cmp1 = std::to_string(this->GetFloat());
+  }
 
   if (other.GetType() == SerializerTypeId::_TYPE_ID_STRING) {
     cmp2 = other.GetString();
   }
   else if (other.GetType() >= SerializerTypeId::_TYPE_ID_ZERO && other.GetType() <= SerializerTypeId::_TYPE_ID_BOOLEAN) {
     cmp2 = std::to_string(this->GetInt());
+  }
+  else if (other.GetType() == SerializerTypeId::_TYPE_ID_NUMBER) {
+    cmp2 = std::to_string(other.GetFloat());
   }
 
   return cmp1 < cmp2;

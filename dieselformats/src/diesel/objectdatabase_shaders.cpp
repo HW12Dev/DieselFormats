@@ -212,10 +212,10 @@ void diesel::objectdatabase::typeidclasses::D3DShaderPassData::load(Reader& read
   }
 
   this->_compiled_vertex_shader_size = reader.ReadType<uint32_t>();
-  this->_compiled_vertex_shader = new char[this->_compiled_vertex_shader_size];
+  this->_compiled_vertex_shader = new char[this->_compiled_vertex_shader_size] {};
   reader.ReadBytesToBuffer(this->_compiled_vertex_shader, this->_compiled_vertex_shader_size);
   this->_compiled_pixel_shader_size = reader.ReadType<uint32_t>();
-  this->_compiled_pixel_shader = new char[this->_compiled_pixel_shader_size];
+  this->_compiled_pixel_shader = new char[this->_compiled_pixel_shader_size] {};
   reader.ReadBytesToBuffer(this->_compiled_pixel_shader, this->_compiled_pixel_shader_size);
 }
 

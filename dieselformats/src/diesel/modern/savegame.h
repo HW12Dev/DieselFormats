@@ -119,18 +119,27 @@ namespace diesel {
 
         const SerializerVariant& GetValue() const { return value; }
 
+        void SetHasVerification(bool hasverification) { hasVerification = hasverification; }
+
       private:
         void ReadValue(Reader& reader, const DieselFormatsLoadingParameters& version, SerializerVariant& returnValue);
         void ReadTable(Reader& reader, const DieselFormatsLoadingParameters& version, SerializerVariant& returnTable);
 
       private:
         SerializerVariant value;
+
+        bool hasVerification;
       };
 
 
     public:
       // Reads a Diesel save file, input must be the unencrypted file. PAYDAY: The Heist doesn't encrypt save games.
       bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+
+    private:
+      bool read_legacy(Reader& reader, const DieselFormatsLoadingParameters& version);
+      bool read_modern(Reader& reader, const DieselFormatsLoadingParameters& version);
+    public:
 
       InformationData& GetInformationData() { return informationData; }
       const InformationData& GetInformationData() const { return informationData; }
