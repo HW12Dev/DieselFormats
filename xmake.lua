@@ -1,6 +1,6 @@
 add_rules("mode.release", "mode.debug")
 set_defaultmode("debug")
-
+--set_policy("build.sanitizer.address", true)
 add_requires("qt6widgets 6.9.0", "qt6gui 6.9.0")
 
 includes("dieselformats")
@@ -9,6 +9,9 @@ includes("tools/lookuptool")
 includes("tools/xmbparser")
 includes("tools/banditsdecryptor")
 includes("tools/packagesdumper")
+includes("tools/dieselunbundler")
+includes("tools/assimptest")
+--includes("tools/dieselengineexplorer")
 
 target("DieselFormatsPlayground")
   set_languages("cxxlatest")

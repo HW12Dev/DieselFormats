@@ -2,7 +2,7 @@
 
 <Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
   <NativeComponent
-    ComponentId="{1B207119-B9DE-407C-B7FC-DD6854A0D752}"
+    ComponentId="{5FA33864-5196-40F0-A25A-108F872713EA}"
     ComponentLevel="9991500"
     ModuleName="DieselVisualiser.dll">
 

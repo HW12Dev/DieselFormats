@@ -63,6 +63,11 @@ unsigned long long diesel::modern::hash64(
 ) {
   unsigned long long a, b, c, len;
 
+  if (k == nullptr) {
+    k = const_cast<char*>("");
+    length = 0;
+  }
+
   /* Set up the internal state */
   len = length;
   a = b = level;            /* the previous hash value */
@@ -137,7 +142,7 @@ unsigned long long diesel::modern::hash64(
 }
 
 unsigned long long diesel::modern::hash64(const std::string& s) {
-  return diesel::modern::hash64(const_cast<char*>(s.c_str()), s.length(), 0);
+  return diesel::modern::hash64(const_cast<char*>(s.c_str()), s.size(), 0);
 }
 
 diesel::modern::Idstring::Idstring() {

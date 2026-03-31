@@ -70,7 +70,7 @@ void BundleDBLoadingPanel::LoadButtonPressed() {
   auto path = this->pathEntry->text();
   if (QFile(path).exists()) {
 
-    Reader bdbReader(path.toStdWString());
+    Reader bdbReader(path.toUtf8().constData());
 
     diesel::DieselFormatsLoadingParameters loadParams = diesel::DieselFormatsLoadingParameters();
     loadParams.version = version;
@@ -186,6 +186,9 @@ void BundleDBLookup::UpdateIndexLookup() {
 
   auto dbKeyTxt = indexLookupInput->text();
 
+  if (dbKeyTxt.isEmpty())
+    return;
+
   try {
     auto dbKey = std::stoul(dbKeyTxt.toStdString(), 0, 10);
 
@@ -212,12 +215,25 @@ void BundleDBLookup::UpdateFileNameLookup() {
 
   QString fullFileName = fileNameLookupInput->text();
 
-  if (fullFileName.split(".").length() < 2)
+  if (fullFileName.isEmpty())
+    return;
+
+  if (!fullFileName.contains("."))
+    return;
+  if (!fullFileName.length() > 1)
+    return;
+
+  QStringList splitName = fullFileName.split(".");
+
+  if (splitName.length() != 2)
     return;
 
   try {
-    QString name = fullFileName.split(".")[0];
-    QString type = fullFileName.split(".")[1];
+    QString name = splitName[0];
+    QString type = splitName[1];
+
+    if (name.isNull() || type.isNull() || name.size() == 0 || type.size() == 0)
+      return;
 
     auto dbKey = this->loadedBdb->GetDBKeyFromTypeAndName(type.toStdString(), name.toStdString());
 

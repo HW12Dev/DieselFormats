@@ -21,6 +21,6 @@ target("DieselLookupTool")
 
   
   after_build(function()
-    os.cp("$(scriptdir)/icon-white.png", "$(buildir)/windows/" .. os.arch() .. "/" .. (is_mode("debug") and "debug" or "release") .. "/icon-white.png")
+    os.cp("$(scriptdir)/icon-white.png", "$(builddir)/windows/" .. os.arch() .. "/" .. (is_mode("debug") and "debug" or "release") .. "/icon-white.png")
   end)
 target_end()
