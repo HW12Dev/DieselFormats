@@ -43,8 +43,9 @@ namespace diesel {
       AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>(0) : writer.WriteType<uint64_t>(0); // _s
 
     }
+
     BlobSaverChunk::BlobSaverChunk(Reader& reader, const DieselFormatsLoadingParameters& version) { // dsl::BlobSaver::save_binary/dsl::BlobSaver::save_array
-      if(version.version == EngineVersion::RAID_WORLD_WAR_II_LATEST) {
+      if(!AreLoadParameters32Bit(version)) {
         reader.AddPosition(8);
         this->_size = reader.ReadType<uint64_t>();
         reader.AddPosition(8);
@@ -56,6 +57,26 @@ namespace diesel {
         reader.AddPosition(4); // capacity?
         this->_data = reader.ReadType<uint32_t>();
       }
+    }
+
+    void BlobSaverChunk::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t& outPositionOfDataPointerInBuffer)
+    {
+        if (!AreLoadParameters32Bit(version))
+        {
+            writer.AddPosition(8); // allocator
+            writer.WriteType<uint64_t>(size);
+            writer.WriteType<uint64_t>(size);
+            outPositionOfDataPointerInBuffer = writer.GetPosition();
+            writer.AddPosition(8);
+        }
+        else
+        {
+            writer.AddPosition(4); // allocator
+            writer.WriteType<uint32_t>((uint32_t)size);
+            writer.WriteType<uint32_t>((uint32_t)size);
+            outPositionOfDataPointerInBuffer = writer.GetPosition();
+            writer.AddPosition(4);
+        }
     }
   }
 }

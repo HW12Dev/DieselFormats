@@ -19,12 +19,14 @@ namespace diesel {
       class Table {
       public:
         bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+        void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t& outTableVectorContentsPosition);
       public:
         int meta;
         std::vector<TableEntry> entries;
       };
     public:
       bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+      void Write(Writer& writer, const DieselFormatsLoadingParameters& version);
 
     private:
       static std::string GetGenericXmlKey(ScriptData& data, EngineData::EngineValue value);

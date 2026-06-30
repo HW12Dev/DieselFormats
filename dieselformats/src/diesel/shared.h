@@ -31,6 +31,7 @@ namespace diesel {
     PAYDAY_2_MODERN_CONSOLE, // XB1, PS4 and Switch
     PAYDAY_2_LINUX_LATEST,
     RAID_WORLD_WAR_II_LATEST,
+    DIESEL_V3 = RAID_WORLD_WAR_II_LATEST
   };
 
   // Determines which platform a provided file was created for (e.g. PS3 shader database in a Windows build). Used to determine endianness when reading integers.

@@ -11,6 +11,7 @@ includes("tools/banditsdecryptor")
 includes("tools/packagesdumper")
 includes("tools/dieselunbundler")
 includes("tools/assimptest")
+includes("tools/64bitupgrader")
 --includes("tools/dieselengineexplorer")
 
 target("DieselFormatsPlayground")

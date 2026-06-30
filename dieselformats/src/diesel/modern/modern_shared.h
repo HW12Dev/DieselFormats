@@ -15,6 +15,8 @@ namespace diesel {
     class BlobSaverChunk {
     public:
       BlobSaverChunk(Reader& reader, const DieselFormatsLoadingParameters& version);
+
+      static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t& outPositionOfDataPointerInBuffer);
     public:
       unsigned long long _size;
       unsigned long long _data;

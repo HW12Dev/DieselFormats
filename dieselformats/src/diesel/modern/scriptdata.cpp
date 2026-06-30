@@ -6,7 +6,7 @@ using namespace diesel::modern;
 bool ScriptData::Table::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
   this->meta = reader.ReadType<int>();
 
-  if (!AreLoadParameters32Bit(version))reader.AddPosition(4); // 64bit padding
+  if (!AreLoadParameters32Bit(version)) reader.AddPosition(4); // 64bit padding
 
   auto entries = Vector<TableEntry>(reader, version);
 
@@ -19,6 +19,24 @@ bool ScriptData::Table::Read(Reader& reader, const DieselFormatsLoadingParameter
 
   reader.SetPosition(saved_position);
   return true;
+}
+
+void ScriptData::Table::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t& outTableVectorContentsPosition)
+{
+    writer.WriteType<int>(meta);
+
+    if (!AreLoadParameters32Bit(version)) writer.AddPosition(4); // 64bit padding
+
+    
+    uint64_t entriesPosition = 0;
+    Vector<TableEntry>::Write(writer, version, entries.size(), entries.size(), entriesPosition);
+
+    if (entries.empty())
+    {
+        entriesPosition = 0;
+    }
+
+    outTableVectorContentsPosition = entriesPosition;
 }
 
 bool ScriptData::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
@@ -75,6 +93,165 @@ bool ScriptData::Read(Reader& reader, const DieselFormatsLoadingParameters& vers
   }
 
   return true;
+}
+
+void ScriptData::Write(Writer& writer, const DieselFormatsLoadingParameters& version)
+{
+    size_t numbersDataPosition = 0;
+    size_t stringsDataPosition = 0;
+    size_t vector3sDataPosition = 0;
+    size_t quaternionsDataPosition = 0;
+    size_t idstringsDataPosition = 0;
+    size_t tablesDataPosition = 0;
+
+    BlobSaverChunk::Write(writer, version, _numbers.size(), numbersDataPosition);
+    BlobSaverChunk::Write(writer, version, _strings.size(), stringsDataPosition);
+    BlobSaverChunk::Write(writer, version, _vector3s.size(), vector3sDataPosition);
+    BlobSaverChunk::Write(writer, version, _quaternions.size(), quaternionsDataPosition);
+    BlobSaverChunk::Write(writer, version, _idstrings.size(), idstringsDataPosition);
+    BlobSaverChunk::Write(writer, version, _tables.size(), tablesDataPosition);
+
+    if (AreLoadParameters32Bit(version))
+    {
+        writer.AddPosition(4);
+    }
+    else
+    {
+        writer.AddPosition(8);
+    }
+
+    writer.WriteType<EngineData::EngineValue>(_root);
+
+    size_t numbersData = 0;
+    size_t stringsData = 0;
+    size_t vector3sData = 0;
+    size_t quaternionsData = 0;
+    size_t idstringsData = 0;
+    size_t tablesData = 0;
+
+    numbersData = writer.GetPosition();
+
+    for (size_t i = 0; i < _numbers.size(); i++)
+    {
+        writer.WriteType<float>(_numbers[i]);
+    }
+
+    std::vector<std::pair<std::string, uint64_t>> stringsDataPositions;
+    stringsData = writer.GetPosition();
+
+    for (size_t i = 0; i < _strings.size(); i++)
+    {
+        size_t dataPosition = 0;
+        String::Write(writer, version, dataPosition);
+
+        stringsDataPositions.push_back(std::make_pair(_strings[i], dataPosition));
+    }
+
+    for (auto& stringsToWrite : stringsDataPositions)
+    {
+        size_t stringStart = writer.GetPosition();
+        writer.WriteString(stringsToWrite.first);
+
+        size_t saved = writer.GetPosition();
+        writer.SetPosition(stringsToWrite.second);
+
+        if (AreLoadParameters32Bit(version))
+        {
+            writer.WriteType<uint32_t>((uint32_t)stringStart);
+        }
+        else
+        {
+            writer.WriteType<uint64_t>(stringStart);
+        }
+        writer.SetPosition(saved);
+    }
+
+    writer.AddPosition(3);
+
+    vector3sData = writer.GetPosition();
+
+    for (size_t i = 0; i < _vector3s.size(); i++)
+    {
+        writer.WriteType<Vector3>(_vector3s[i]);
+    }
+
+    quaternionsData = writer.GetPosition();
+
+    for (size_t i = 0; i < _quaternions.size(); i++)
+    {
+        writer.WriteType<Quaternion>(_quaternions[i]);
+    }
+
+    idstringsData = writer.GetPosition();
+
+    for (size_t i = 0; i < _idstrings.size(); i++)
+    {
+        writer.WriteType<uint64_t>(_idstrings[i]);
+    }
+
+    std::map<Table*, uint64_t> tablesDataPositions;
+    tablesData = writer.GetPosition();
+
+    for (size_t i = 0; i < _tables.size(); i++)
+    {
+        uint64_t dataPosition = 0;
+        _tables[i].Write(writer, version, dataPosition);
+
+        tablesDataPositions[&_tables[i]] = dataPosition;
+    }
+
+    for (auto& tableToWrite : tablesDataPositions)
+    {
+        if (tableToWrite.second == 0)
+        {
+            continue;
+        }
+
+        size_t tableStart = writer.GetPosition();
+        for (size_t i = 0; i < tableToWrite.first->entries.size(); i++)
+        {
+            writer.WriteType<TableEntry>(tableToWrite.first->entries[i]);
+        }
+
+        size_t saved = writer.GetPosition();
+        writer.SetPosition(tableToWrite.second);
+
+        if (AreLoadParameters32Bit(version))
+        {
+            writer.WriteType<uint32_t>((uint32_t)tableStart);
+        }
+        else
+        {
+            writer.WriteType<uint64_t>(tableStart);
+        }
+
+        writer.SetPosition(saved);
+    }
+
+    uint32_t blobType = 0;
+    if (version.version <= diesel::EngineVersion::PAYDAY_THE_HEIST_LATEST)
+    {
+        blobType = 0x6D75CD7B;
+    }
+    else
+    {
+        blobType = 0x6D75CD70;
+    }
+    writer.WriteType<uint32_t>(blobType);
+
+    writer.SetPosition(numbersDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)numbersData) : writer.WriteType<uint64_t>(numbersData);
+    writer.SetPosition(stringsDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)stringsData) : writer.WriteType<uint64_t>(stringsData);
+    writer.SetPosition(vector3sDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)vector3sData) : writer.WriteType<uint64_t>(vector3sData);
+    writer.SetPosition(quaternionsDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)quaternionsData) : writer.WriteType<uint64_t>(quaternionsData);
+    writer.SetPosition(idstringsDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)idstringsData) : writer.WriteType<uint64_t>(idstringsData);
+    writer.SetPosition(tablesDataPosition);
+    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)tablesData) : writer.WriteType<uint64_t>(tablesData);
+
 }
 
 using EngineValueType = EngineData::EngineValueType;
