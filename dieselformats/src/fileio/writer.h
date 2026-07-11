@@ -12,7 +12,35 @@
 
 class Reader;
 
-class FileWriterContainer {
+class WriterContainer {
+protected:
+  WriterContainer();
+public:
+  virtual ~WriterContainer();
+
+  virtual void Close() = 0;
+
+  virtual bool IsValid() const = 0;
+
+  virtual unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) = 0;
+};
+
+class MemoryWriterContainer : public WriterContainer {
+public:
+  MemoryWriterContainer();
+
+  virtual void Close() override {};
+
+  virtual bool IsValid() const override { return true; }
+
+  virtual unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) override;
+
+  const std::vector<char>& GetData() const { return data; }
+private:
+  std::vector<char> data;
+};
+
+class FileWriterContainer : public WriterContainer {
 public:
   FileWriterContainer(const std::filesystem::path& path);
   ~FileWriterContainer();
@@ -21,11 +49,11 @@ public:
   FileWriterContainer& operator=(const FileWriterContainer& other) = delete;
   FileWriterContainer& operator=(FileWriterContainer& other) = delete;
 public:
-  void Close();
+  virtual void Close() override;
 
-  bool IsValid() const;
+  virtual bool IsValid() const override;
 
-  unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position);
+  virtual unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) override;
 
 private:
   HANDLE file;
@@ -33,6 +61,9 @@ private:
 
 class Writer {
 public:
+  // Initialise a writer to write to a memory buffer that the writer provides and controls
+  Writer();
+  // Initialise a writer from file
   Writer(const std::filesystem::path& path);
   ~Writer();
 
@@ -72,10 +103,11 @@ public:
   template<> void WriteType(const int32_t& value) { int32_t writeValue = value; if (this->swapEndiannessOfIntegers) writeValue = _byteswap_ulong(value); WriteBytes((char*)&writeValue, sizeof(int32_t)); }
   template<> void WriteType(const int64_t& value) { int64_t writeValue = value; if (this->swapEndiannessOfIntegers) writeValue = _byteswap_uint64(value); WriteBytes((char*)&writeValue, sizeof(int64_t)); }
 
+  WriterContainer* GetContainer() const { return container.get(); }
 
 private:
   bool swapEndiannessOfIntegers;
   unsigned long long position;
-  std::shared_ptr<FileWriterContainer> container;
+  std::shared_ptr<WriterContainer> container;
   //HANDLE file;
 };

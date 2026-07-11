@@ -4,6 +4,24 @@
 
 #include "fileio/zlibcompression.h"
 
+
+WriterContainer::WriterContainer() {}
+WriterContainer::~WriterContainer() {}
+
+MemoryWriterContainer::MemoryWriterContainer() {}
+
+unsigned long long MemoryWriterContainer::WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) {
+
+    if (position + size > data.size())
+    {
+        data.resize(position + size);
+    }
+
+    memcpy(&data.data()[position], inBuffer, size);
+
+    return size;
+}
+
 FileWriterContainer::FileWriterContainer(const std::filesystem::path& path) {
   this->file = INVALID_HANDLE_VALUE;
 
@@ -40,6 +58,13 @@ unsigned long long FileWriterContainer::WriteBytes(char* inBuffer, std::size_t s
   }
 
   return bytesWritten;
+}
+
+Writer::Writer() {
+    this->position = 0;
+    this->swapEndiannessOfIntegers = false;
+
+    this->container = std::make_shared<MemoryWriterContainer>();
 }
 
 Writer::Writer(const std::filesystem::path& path) {

@@ -23,8 +23,7 @@ FileReaderContainer::FileReaderContainer(const std::filesystem::path& path) {
 }
 
 FileReaderContainer::~FileReaderContainer() {
-  if (this->file != INVALID_HANDLE_VALUE)
-    CloseHandle(this->file);
+  this->Close();
 }
 
 void FileReaderContainer::Close() {
