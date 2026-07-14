@@ -29,15 +29,18 @@ class MemoryWriterContainer : public WriterContainer {
 public:
   MemoryWriterContainer();
 
-  virtual void Close() override {};
+  virtual void Close() override { closed = true; };
 
   virtual bool IsValid() const override { return true; }
 
   virtual unsigned long long WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) override;
 
   const std::vector<char>& GetData() const { return data; }
+  const std::vector<char>&& TakeData() { closed = true; return std::move(data); }
+
 private:
   std::vector<char> data;
+  bool closed;
 };
 
 class FileWriterContainer : public WriterContainer {

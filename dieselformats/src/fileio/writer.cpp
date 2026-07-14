@@ -8,9 +8,18 @@
 WriterContainer::WriterContainer() {}
 WriterContainer::~WriterContainer() {}
 
-MemoryWriterContainer::MemoryWriterContainer() {}
+MemoryWriterContainer::MemoryWriterContainer() {
+    closed = false;
+}
 
 unsigned long long MemoryWriterContainer::WriteBytes(char* inBuffer, std::size_t size, unsigned long long position) {
+
+    if (closed)
+    {
+        throw std::runtime_error("Attempt to write to a closed MemoryWriter");
+        return -1;
+    }
+
 
     if (position + size > data.size())
     {
