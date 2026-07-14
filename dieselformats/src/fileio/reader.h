@@ -27,7 +27,7 @@ protected:
 
 class MemoryReaderContainer : public ReaderContainer {
 public:
-  MemoryReaderContainer(char* buffer, std::size_t size);
+  MemoryReaderContainer(char* buffer, std::size_t size, bool owns_data = true);
   ~MemoryReaderContainer();
 public:
   virtual void Close();
@@ -38,6 +38,7 @@ public:
 
 protected:
   char* data;
+  bool owns_data;
 };
 class FileReaderContainer : public ReaderContainer {
 public:
@@ -59,7 +60,7 @@ class Reader {
 public:
   Reader();
   Reader(const std::filesystem::path& path);
-  Reader(char* buffer, std::size_t size);
+  Reader(char* buffer, std::size_t size, bool owns_data = true);
   ~Reader();
 
   Reader(const Reader& other);

@@ -68,24 +68,21 @@ unsigned long long FileReaderContainer::ReadBytesToBuffer(char* outBuffer, std::
   return size;
 }
 
-MemoryReaderContainer::MemoryReaderContainer(char* buffer, std::size_t size) {
+MemoryReaderContainer::MemoryReaderContainer(char* buffer, std::size_t size, bool owns_data) {
   this->size = size;
-
   this->data = buffer;
+  this->owns_data = owns_data;
 }
 
 MemoryReaderContainer::~MemoryReaderContainer() {
-  if (this->data) {
-    delete[] this->data;
-    this->data = nullptr;
-  }
+  Close();
 }
 
 void MemoryReaderContainer::Close() {
-  if (this->data) {
+  if (this->data && this->owns_data) {
     delete[] this->data;
-    this->data = nullptr;
   }
+  this->data = nullptr;
 }
 
 unsigned long long MemoryReaderContainer::GetFileSize() {
@@ -122,9 +119,9 @@ Reader::Reader(const std::filesystem::path& path) {
   this->swapEndiannessOfIntegers = false;
 }
 
-Reader::Reader(char* buffer, std::size_t size) {
+Reader::Reader(char* buffer, std::size_t size, bool owns_data) {
   this->isFileBased = false;
-  this->container = std::make_shared<MemoryReaderContainer>(buffer, size);
+  this->container = std::make_shared<MemoryReaderContainer>(buffer, size, owns_data);
   this->position = 0;
   this->replacementSize = -1;
   this->swapEndiannessOfIntegers = false;
