@@ -240,17 +240,17 @@ void ScriptData::Write(Writer& writer, const DieselFormatsLoadingParameters& ver
     writer.WriteType<uint32_t>(blobType);
 
     writer.SetPosition(numbersDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)numbersData) : writer.WriteType<uint64_t>(numbersData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)numbersData); } else { writer.WriteType<uint64_t>(numbersData); };
     writer.SetPosition(stringsDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)stringsData) : writer.WriteType<uint64_t>(stringsData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)stringsData); } else { writer.WriteType<uint64_t>(stringsData); };
     writer.SetPosition(vector3sDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)vector3sData) : writer.WriteType<uint64_t>(vector3sData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)vector3sData); } else { writer.WriteType<uint64_t>(vector3sData); };
     writer.SetPosition(quaternionsDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)quaternionsData) : writer.WriteType<uint64_t>(quaternionsData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)quaternionsData); } else { writer.WriteType<uint64_t>(quaternionsData); };
     writer.SetPosition(idstringsDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)idstringsData) : writer.WriteType<uint64_t>(idstringsData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)idstringsData); } else { writer.WriteType<uint64_t>(idstringsData); };
     writer.SetPosition(tablesDataPosition);
-    AreLoadParameters32Bit(version) ? writer.WriteType<uint32_t>((uint32_t)tablesData) : writer.WriteType<uint64_t>(tablesData);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)tablesData); } else { writer.WriteType<uint64_t>(tablesData); };
 
 }
 

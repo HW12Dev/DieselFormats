@@ -6,7 +6,7 @@
 
 #include <exception>
 
-static_assert(sizeof(diesel::Glyph) == 10);
+using namespace diesel::modern;
 
 namespace diesel {
   bool AngelCodeFont::Read(Reader& reader, const DieselFormatsLoadingParameters& version) {
@@ -22,6 +22,15 @@ namespace diesel {
       return true;
     }
     return false;
+  }
+
+  bool AngelCodeFont::Write(Writer& writer, const DieselFormatsLoadingParameters& version) {
+      if (version.version < diesel::EngineVersion::MODERN_VERSION_START) {
+          throw std::runtime_error("Not supported");
+      }
+      else {
+          return write_modern(writer, version);
+      }
   }
 
   void AngelCodeFont::load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version) { // AngelCodeFont::compile from Lead and Gold
@@ -50,8 +59,18 @@ namespace diesel {
 
     reader.SetPosition(startPosition + glyphs._data);
 
-    for (int i = 0; i < glyphs._n; i++) {
-      auto glyph = reader.ReadType<Glyph>();
+    for (int i = 0; i < glyphs._n; i++)
+    {
+        Glyph glyph{};
+        glyph.texture_index = reader.ReadType<uint8_t>();
+        glyph.channel = 0;
+        glyph.w = reader.ReadType<uint8_t>();
+        glyph.h = reader.ReadType<uint8_t>();
+        glyph.xadvance = reader.ReadType<int8_t>();
+        glyph.xoffset = reader.ReadType<int8_t>();
+        glyph.yoffset = reader.ReadType<int8_t>();
+        glyph.x = reader.ReadType<uint16_t>();
+        glyph.y = reader.ReadType<uint16_t>();
 
       this->_glyphs.push_back(glyph);
     }
@@ -67,7 +86,7 @@ namespace diesel {
       for (int i = 0; i < character_to_glyph_map._values._n; i++) { values.push_back(reader.ReadType<uint32_t>()); }
 
       for (int i = 0; i < keys.size(); i++) {
-        this->_character_to_glyph_map.insert({ keys[i], values[i] });
+        this->_character_to_glyph_map.push_back({ keys[i], values[i] });
       }
     }
 
@@ -113,7 +132,28 @@ namespace diesel {
     reader.SetPosition(startPosition + glyphs._data);
 
     for (int i = 0; i < glyphs._size; i++) {
-      auto glyph = reader.ReadType<Glyph>();
+      Glyph glyph{};
+      glyph.texture_index = reader.ReadType<uint8_t>();
+      if (version.version >= diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST)
+      {
+        glyph.channel = reader.ReadType<uint8_t>();
+      }
+      else {
+        glyph.channel = 15;
+      }
+      glyph.w = reader.ReadType<uint8_t>();
+      glyph.h = reader.ReadType<uint8_t>();
+      glyph.xadvance = reader.ReadType<int8_t>();
+      glyph.xoffset = reader.ReadType<int8_t>();
+      glyph.yoffset = reader.ReadType<int8_t>();
+
+      if (version.version >= diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST)
+      {
+          reader.AddPosition(1); // padding
+      }
+      glyph.x = reader.ReadType<uint16_t>();
+      glyph.y = reader.ReadType<uint16_t>();
+
 
       this->_glyphs.push_back(glyph);
     }
@@ -124,22 +164,105 @@ namespace diesel {
       auto character = reader.ReadType<uint32_t>(); // or char32_t
       auto glyph = reader.ReadType<uint32_t>();
 
-      this->_character_to_glyph_map.insert({ character, glyph });
+      this->_character_to_glyph_map.push_back({ character, glyph });
     }
 
     reader.SetPosition(startPosition + kerning._data._data);
 
     for (int i = 0; i < kerning._data._size; i++) {
-      static_assert(sizeof(std::pair<int, int>) == 8);// if this static assert fails, which to reading both values of the pair separately
-      auto key = reader.ReadType<std::pair<int, int>>();
+      auto key_first = reader.ReadType<int32_t>();
+      auto key_second = reader.ReadType<int32_t>();
       auto kerning = reader.ReadType<int32_t>();
 
-      this->_kerning.insert({ key, kerning });
+      this->_kerning.insert({ {key_first, key_second}, kerning });
     }
 
     reader.SetPosition(startPosition + face._s);
 
     this->_face = reader.ReadString(); // read is slow if not reading from memory
+  }
+
+  bool AngelCodeFont::write_modern(Writer& writer, const DieselFormatsLoadingParameters& version)
+  {
+    uint64_t glyphsDataOffsetPosition = -1;
+    Vector<Glyph>::Write(writer, version, _glyphs.size(), _glyphs.size(), glyphsDataOffsetPosition);
+    uint64_t characterToGlyphMapDataOffsetPosition = -1;
+    SortMap<int, int>::Write(writer, version, _character_to_glyph_map.size(), _character_to_glyph_map.size(), true, characterToGlyphMapDataOffsetPosition);
+    uint64_t kerningDataOffsetPosition = -1;
+    SortMap<std::pair<int, int>, int>::Write(writer, version, _kerning.size(), _kerning.size(), true, kerningDataOffsetPosition);
+
+    uint64_t faceDataOffsetPosition = -1;
+    String::Write(writer, version, faceDataOffsetPosition);
+
+    writer.WriteType<int32_t>(_size);
+    writer.WriteType<int32_t>(_texture_width);
+    writer.WriteType<int32_t>(_texture_height);
+    writer.WriteType<int32_t>(_base_line);
+    writer.WriteType<int32_t>(_line_height);
+
+    writer.AddPosition(4);
+
+    uint64_t glyphsDataOffset = writer.GetPosition();
+    for (const Glyph& glyph : _glyphs)
+    {
+        writer.WriteType<uint8_t>(glyph.texture_index);
+        if (version.version >= diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST)
+        {
+            writer.WriteType<uint8_t>(glyph.channel);
+        }
+        writer.WriteType<uint8_t>(glyph.w);
+        writer.WriteType<uint8_t>(glyph.h);
+        writer.WriteType<int8_t>(glyph.xadvance);
+        writer.WriteType<int8_t>(glyph.xoffset);
+        writer.WriteType<int8_t>(glyph.yoffset);
+
+        if (version.version >= diesel::EngineVersion::RAID_WORLD_WAR_II_LATEST)
+        {
+            writer.AddPosition(1); // padding
+        }
+        writer.WriteType<uint16_t>(glyph.x);
+        writer.WriteType<uint16_t>(glyph.y);
+
+
+    }
+
+    uint64_t characterToGlyphMapDataOffset = writer.GetPosition();
+    for (auto& characterToGlyph : _character_to_glyph_map)
+    {
+        writer.WriteType<uint32_t>(characterToGlyph.first);
+        writer.WriteType<uint32_t>(characterToGlyph.second);
+    }
+
+    uint64_t kerningDataOffset = writer.GetPosition();
+    for (auto& kerningPair : _kerning)
+    {
+        writer.WriteType<int>(kerningPair.first.first);
+        writer.WriteType<int>(kerningPair.first.second);
+
+        writer.WriteType<int32_t>(kerningPair.second);
+    }
+
+    uint64_t faceDataOffset = writer.GetPosition();
+    writer.WriteString(_face);
+
+    writer.AlignToSize(4);
+
+    writer.WriteType<uint32_t>(0x3730537A); // blob type
+
+      
+    writer.SetPosition(glyphsDataOffsetPosition);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)glyphsDataOffset); } else { writer.WriteType<uint64_t>(glyphsDataOffset); };
+
+    writer.SetPosition(characterToGlyphMapDataOffsetPosition);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)characterToGlyphMapDataOffset); } else { writer.WriteType<uint64_t>(characterToGlyphMapDataOffset); };
+    
+    writer.SetPosition(kerningDataOffsetPosition);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)kerningDataOffset); } else { writer.WriteType<uint64_t>(kerningDataOffset); };
+    
+    writer.SetPosition(faceDataOffsetPosition);
+    if (AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)faceDataOffset); } else { writer.WriteType<uint64_t>(faceDataOffset); };
+
+    return true;
   }
 
   std::string AngelCodeFont::DumpFontToXml(const AngelCodeFont& font) { // AngelCodeFont::compile

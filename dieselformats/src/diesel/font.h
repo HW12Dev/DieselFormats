@@ -17,6 +17,17 @@ namespace diesel {
   class Glyph {
   public:
     uint8_t texture_index;
+
+    /*
+    * 0, 15 - All channels.      RGBA out = RGBA in
+    * 1     - B.                 RGBA out = BBBB in
+    * 2     - G.                 RGBA out = GGGG in
+    * 3     - B colour, A alpha. RGBA out = BBBA in
+    * 4     - R.                 RGBA out = RRRR in
+    * 8     - A.                 RGBA out = AAAA in
+    * 12    - R colour, A alpha. RGBA out = RRRA in
+    */
+    uint8_t channel;
     uint8_t w;
     uint8_t h;
     int8_t xadvance;
@@ -31,17 +42,21 @@ namespace diesel {
   public:
     // Reader must belong to a .font or .blb font file. The provided engine version will be used to determine which version to load.
     bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+
+    bool Write(Writer& writer, const DieselFormatsLoadingParameters& version);
   private:
     // Loads .blb font files
     void load_from_legacy(Reader& reader, const DieselFormatsLoadingParameters& version);
     // Loads .font files
     void load_from_modern(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+    bool write_modern(Writer& writer, const DieselFormatsLoadingParameters& version);
+
   public:
     static std::string DumpFontToXml(const AngelCodeFont& font);
   private:
     std::vector<Glyph> _glyphs;
-    std::map<int, int> _character_to_glyph_map;
+    std::vector<std::pair<int, int>> _character_to_glyph_map;
     std::map<std::pair<int, int>, int> _kerning;
     std::string _face;
 
