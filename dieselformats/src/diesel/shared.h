@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "fileio/reader.h"
+#include "fileio/writer.h"
 
 namespace diesel {
   typedef int EngineVersionBaseType;
@@ -88,11 +89,21 @@ namespace diesel {
     float z;
     float w;
   };
+  class QuaternionPacked {
+  public:
+    unsigned int _data;
+  };
   class Vector3 {
   public:
     float x;
     float y;
     float z;
+  };
+  class Vector3Packed {
+  public:
+    uint16_t x;
+    uint16_t y;
+    uint16_t z;
   };
   class Vector3d {
   public:
@@ -131,6 +142,8 @@ namespace diesel {
     InplaceArray() : _n(-1), _data(-1) {}
     InplaceArray(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+    static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t& outPositionOfDataPointer);
+
   public:
     unsigned long long _n; // int
     unsigned long long _data; // T*
@@ -149,20 +162,91 @@ namespace diesel {
   public:
     InplaceString(Reader& reader, const DieselFormatsLoadingParameters& version);
 
+    static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t& outPositionOfDataPointer);
+
   public:
     unsigned long long _s;
   };
 
   template<typename T>
+  class InplaceVirtual { // used in animation serialisation
+  public:
+      InplaceVirtual(Reader& reader, const DieselFormatsLoadingParameters& version);
+
+      static void Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint32_t type_id, uint64_t& outPositionOfDataPointer);
+
+  public:
+      uint32_t _type_id;
+      size_t _object;
+  };
+
+  template<typename T>
   InplaceArray<T>::InplaceArray(Reader& reader, const DieselFormatsLoadingParameters& version) {
-    this->_n = reader.ReadType<uint32_t>();
-    this->_data = reader.ReadType<uint32_t>();
+    if (diesel::AreLoadParameters32Bit(version))
+    {
+      this->_n = reader.ReadType<uint32_t>();
+      this->_data = reader.ReadType<uint32_t>();
+    }
+    else
+    {
+      this->_n = reader.ReadType<uint64_t>();
+      this->_data = reader.ReadType<uint64_t>();
+    }
+  }
+  template<typename T>
+  void InplaceArray<T>::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t size, uint64_t& outPositionOfDataPointer)
+  {
+      if (diesel::AreLoadParameters32Bit(version))
+      {
+          writer.WriteType<uint32_t>(size);
+          outPositionOfDataPointer = writer.GetPosition();
+          writer.WriteType<uint32_t>(0);
+      }
+      else
+      {
+          writer.WriteType<uint64_t>(size);
+          outPositionOfDataPointer = writer.GetPosition();
+          writer.WriteType<uint64_t>(0);
+      }
   }
 
   template<typename Key, typename Value>
   InplaceMap<Key, Value>::InplaceMap(Reader& reader, const DieselFormatsLoadingParameters& version) {
     this->_keys = InplaceArray<Key>(reader, version);
     this->_values = InplaceArray<Value>(reader, version);
+  }
+
+  template<typename T>
+  InplaceVirtual<T>::InplaceVirtual(Reader& reader, const DieselFormatsLoadingParameters& version) {
+    if (diesel::AreLoadParameters32Bit(version))
+    {
+      this->_type_id = reader.ReadType<uint32_t>();
+      this->_object = reader.ReadType<uint32_t>();
+    }
+    else
+    {
+        // total guess
+        this->_type_id = reader.ReadType<uint32_t>();
+        reader.AddPosition(4);
+        this->_object = reader.ReadType<uint64_t>();
+    }
+  }
+  template<typename T>
+  void InplaceVirtual<T>::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint32_t type_id, uint64_t& outPositionOfDataPointer)
+  {
+      if (diesel::AreLoadParameters32Bit(version))
+      {
+          writer.WriteType<uint32_t>(type_id);
+          outPositionOfDataPointer = writer.GetPosition();
+          writer.WriteType<uint32_t>(0);
+      }
+      else
+      {
+          writer.WriteType<uint32_t>(type_id);
+          writer.AddPosition(4);
+          outPositionOfDataPointer = writer.GetPosition();
+          writer.WriteType<uint64_t>(0);
+      }
   }
 
   // General utilities

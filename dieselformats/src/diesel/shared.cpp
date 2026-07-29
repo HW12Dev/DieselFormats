@@ -28,8 +28,25 @@ namespace diesel {
     return version.sourcePlatform == diesel::FileSourcePlatform::SONY_PLAYSTATION_3 || version.sourcePlatform == diesel::FileSourcePlatform::MICROSOFT_XBOX_360;
   }
 
-  InplaceString::InplaceString(Reader& reader, const DieselFormatsLoadingParameters& version) {
-    this->_s = reader.ReadType<uint32_t>();
+
+  InplaceString::InplaceString(Reader& reader, const DieselFormatsLoadingParameters& version)
+  {
+      this->_s = diesel::AreLoadParameters32Bit(version) ? reader.ReadType<uint32_t>() : reader.ReadType<uint64_t>();
+  }
+
+  void InplaceString::Write(Writer& writer, const DieselFormatsLoadingParameters& version, uint64_t& outPositionOfDataPointer)
+  {
+      outPositionOfDataPointer = writer.GetPosition();
+
+      if (diesel::AreLoadParameters32Bit(version))
+      {
+          writer.AddPosition(4);
+      }
+      else
+      {
+          writer.AddPosition(8);
+      }
+
   }
 
   std::string SanitiseStringForXml(const std::string& str) {
