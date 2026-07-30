@@ -24,6 +24,7 @@ namespace diesel {
       MassUnitResource();
 
       bool Read(Reader& reader, const DieselFormatsLoadingParameters& version);
+      bool Write(Writer& writer, const DieselFormatsLoadingParameters& version);
 
       std::vector<UnitTypeData> _types;
     };
