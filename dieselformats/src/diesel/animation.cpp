@@ -102,6 +102,12 @@ bool Animation::ReadUncompressed(Reader& reader, const DieselFormatsLoadingParam
       BeatTime beat_time;
 
       beat_time.time = reader.ReadType<float>();
+
+      if (!diesel::AreLoadParameters32Bit(version))
+	  {
+		  reader.AddPosition(4); // alignment
+	  }
+
       InplaceString name(reader, version);
 
       size_t returnPos = reader.GetPosition();
@@ -122,6 +128,12 @@ bool Animation::ReadUncompressed(Reader& reader, const DieselFormatsLoadingParam
       AnimationTrigger beat_time;
 
       beat_time.time = reader.ReadType<float>();
+
+      if (!diesel::AreLoadParameters32Bit(version))
+	  {
+		  reader.AddPosition(4); // alignment
+      }
+
       InplaceString name(reader, version);
 
       size_t returnPos = reader.GetPosition();
@@ -287,6 +299,11 @@ bool Animation::Write(Writer& writer, const DieselFormatsLoadingParameters& vers
             size_t dataPosition = 0;
 
             writer.WriteType<float>(_beat_times[i].time);
+            
+            if (!diesel::AreLoadParameters32Bit(version))
+			{
+				writer.AddPosition(4); // alignment
+			}
 
             InplaceString::Write(writer, version, dataPosition);
 
@@ -314,6 +331,11 @@ bool Animation::Write(Writer& writer, const DieselFormatsLoadingParameters& vers
             size_t dataPosition = 0;
 
             writer.WriteType<float>(_trigger_times[i].time);
+
+            if (!diesel::AreLoadParameters32Bit(version))
+			{
+				writer.AddPosition(4); // alignment
+			}
 
             InplaceString::Write(writer, version, dataPosition);
 
