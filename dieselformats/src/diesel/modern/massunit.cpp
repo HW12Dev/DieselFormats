@@ -11,8 +11,8 @@ MassUnitResource::MassUnitResource()
 
 bool MassUnitResource::Read(Reader& reader, const DieselFormatsLoadingParameters& version)
 {
-  if (!VerifyBlobType(reader, 0xCC0BEED1))
-    return false;
+  //if (!VerifyBlobType(reader, 0xCC0BEED1))
+    //return false;
   auto start_pos = reader.GetPosition();
   Vector<UnitTypeData> _types(reader, version);
 
