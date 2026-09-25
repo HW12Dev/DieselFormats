@@ -69,7 +69,7 @@ void BanksInfo::Write(Writer& writer, const DieselFormatsLoadingParameters& vers
     uint64_t pos = writer.GetPosition();
 
     writer.SetPosition(locToWrite.first);
-    writer.WriteType<uint32_t>((uint32_t)pos);
+    if (diesel::AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)pos); } else { writer.WriteType<uint64_t>(pos); }
     writer.SetPosition(pos);
 
     writer.WriteString(locToWrite.second);
@@ -100,7 +100,7 @@ void BanksInfo::Write(Writer& writer, const DieselFormatsLoadingParameters& vers
     uint64_t pos = writer.GetPosition();
 
     writer.SetPosition(namesToWrite.first);
-    writer.WriteType<uint32_t>((uint32_t)pos);
+    if (diesel::AreLoadParameters32Bit(version)) { writer.WriteType<uint32_t>((uint32_t)pos); } else { writer.WriteType<uint64_t>(pos); }
     writer.SetPosition(pos);
 
     writer.WriteString(namesToWrite.second);
