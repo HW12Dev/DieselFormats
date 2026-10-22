@@ -94,11 +94,16 @@ void diesel::objectdatabase::typeidclasses::Object3D::load(Reader& reader, Refer
 {
   Animatable::load(reader, ref_map, loadParameters);
 
-  if (loadParameters.version == EngineVersion::BALLISTICS)
+  if (loadParameters.version <= EngineVersion::PAYDAY_THE_HEIST_V1)
     reader.AddPosition(sizeof(Matrix4)); // Ballistics has another matrix read to this + 88
 
   reader.ReadBytesToBuffer(&this->_local_tm, sizeof(this->_local_tm));
   reader.ReadBytesToBuffer(&this->_local_tm.t, sizeof(this->_local_tm.t));
+
+  if (loadParameters.version <= EngineVersion::PAYDAY_THE_HEIST_V1)
+  {
+      reader.ReadString();
+  }
 
   auto parent_refid = reader.ReadType<RefId>();
   ref_map.load_ref(parent_refid, &this->_parent);
