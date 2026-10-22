@@ -100,7 +100,7 @@ void diesel::objectdatabase::typeidclasses::Object3D::load(Reader& reader, Refer
   reader.ReadBytesToBuffer(&this->_local_tm, sizeof(this->_local_tm));
   reader.ReadBytesToBuffer(&this->_local_tm.t, sizeof(this->_local_tm.t));
 
-  if (loadParameters.version <= EngineVersion::PAYDAY_THE_HEIST_V1)
+  if (loadParameters.version == EngineVersion::PAYDAY_THE_HEIST_V1)
   {
       reader.ReadString();
   }
